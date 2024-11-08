@@ -8,11 +8,19 @@ import java.sql.SQLException;
 import java.util.Properties;
 
 public class ConnectionManagerImpl implements ConnectionManager {
-    private static final String PROPERTIES_FILE = "database.properties";
+    private static final String PROPERTIES_FILE = "db.properties";
     private static final String DRIVER_CLASS = "org.postgresql.Driver";
+    private static ConnectionManagerImpl instance;
 
-    public ConnectionManagerImpl() {
+    private ConnectionManagerImpl() {
         loadDriver();
+    }
+
+    public static ConnectionManagerImpl getInstance() {
+        if (instance == null) {
+            instance = new ConnectionManagerImpl();
+        }
+        return instance;
     }
 
     @Override
