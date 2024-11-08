@@ -9,25 +9,25 @@ import java.util.Set;
  *  One to Many: Department <- Employee
  */
 public class Department {
-    private Long id;
+    private Integer id;
     private String departmentName;
     private String location;
     private Set<Employee> employees;
 
     public Department() {}
 
-    public Department(Long id, String departmentName, String location, Set<Employee> employees) {
+    public Department(Integer id, String departmentName, String location, Set<Employee> employees) {
         this.id = id;
         this.departmentName = departmentName;
         this.location = location;
         this.employees = employees;
     }
 
-    public Long getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
