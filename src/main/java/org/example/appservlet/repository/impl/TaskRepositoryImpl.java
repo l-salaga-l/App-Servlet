@@ -151,7 +151,7 @@ public class TaskRepositoryImpl implements TaskRepository {
     public Iterable<Employee> findEmployeesByTaskId(Integer taskId) {
         String FIND_TASKS_BY_EMPLOYEE_ID = """
                                             SELECT *
-                                            FROM employee e 
+                                            FROM employee e
                                             INNER JOIN assignments a ON e.id = a.employee_id
                                             WHERE a.task_id = ?""";
 
