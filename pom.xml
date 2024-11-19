@@ -20,6 +20,7 @@
         <mockito-junit.version>5.12.0</mockito-junit.version>
         <postgresql.version>42.7.4</postgresql.version>
         <fasterxml.version>2.18.1</fasterxml.version>
+        <byte.buddy.version>1.14.15</byte.buddy.version>
     </properties>
 
     <dependencies>
@@ -54,6 +55,23 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>1.20.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>1.20.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.27.1</version>
+        </dependency>
+        <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>${postgresql.version}</version>
@@ -71,6 +89,31 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
                 <version>3.4.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifact>net.bytebuddy:byte-buddy-agent:${byte.buddy.version}</artifact>
+                            <outputDirectory>${project.build.directory}/test-agent</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.1.2</version>
+                <configuration>
+                    <argLine>-javaagent:"${project.build.directory}/test-agent/byte-buddy-agent-${byte.buddy.version}.jar" -Xshare:off</argLine>
+                </configuration>
             </plugin>
         </plugins>
     </build>
