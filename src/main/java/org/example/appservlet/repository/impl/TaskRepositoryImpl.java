@@ -1,194 +1,160 @@
 package org.example.appservlet.repository.impl;
 
-import org.example.appservlet.db.ConnectionManager;
-import org.example.appservlet.db.ConnectionManagerImpl;
+import jakarta.persistence.criteria.*;
+
+import org.example.appservlet.db.HibernateUtil;
+import org.example.appservlet.db.TransactionOperation;
 import org.example.appservlet.model.Employee;
 import org.example.appservlet.model.Task;
 import org.example.appservlet.repository.TaskRepository;
-import org.example.appservlet.util.SetFromIterable;
 
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
+import org.hibernate.ObjectNotFoundException;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+
 import java.util.Optional;
-import java.util.Set;
 
 public class TaskRepositoryImpl implements TaskRepository {
-    private static final ConnectionManager connectionManager = ConnectionManagerImpl.getInstance();
 
-    public TaskRepositoryImpl() {}
-
+    /**
+     * Сохраняет новую задачу в базе данных.
+     *
+     * @param task задача для сохранения
+     * @return сохраненная задача
+     */
     @Override
     public Task save(Task task) {
-        String INSERT_VALUE = """
-                                INSERT INTO task (task_name, deadline)
-                                VALUES (?, ?)""";
-
-        try (Connection connection = connectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(INSERT_VALUE, Statement.RETURN_GENERATED_KEYS)) {
-
-            preparedStatement.setString(1, task.getTaskName());
-            preparedStatement.setString(2, task.getDeadline());
-
-            preparedStatement.executeUpdate();
-
-            ResultSet resultSet = preparedStatement.getGeneratedKeys();
-            if (resultSet.next()) {
-                task = createTask(resultSet);
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-        return task;
+        return executeTransaction(session -> {
+           session.persist(task);
+           return task;
+        });
     }
 
+    /**
+     * Удаляет задачу по его идентификатору.
+     *
+     * @param id идентификатор задачи для удаления
+     * @throws ObjectNotFoundException если задачи с данным идентификатором не найден
+     */
     @Override
     public void deleteById(Integer id) {
-        String DELETE_BY_ID = "DELETE FROM task WHERE id = ?";
-
-        try (Connection connection = connectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(DELETE_BY_ID)) {
-
-            preparedStatement.setInt(1, id);
-            preparedStatement.executeUpdate();
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        executeTransaction(session -> {
+           Task task = session.get(Task.class, id);
+           if (task == null) {
+               throw new ObjectNotFoundException(id, "Нет записи с данным идентификатором!");
+           }
+           session.remove(task);
+           return null;
+        });
     }
 
-    @Override
-    public boolean existsById(Integer id) {
-        String EXIST = "SELECT EXISTS(SELECT 1 FROM task WHERE id = ?)";
-
-        boolean isExist = false;
-
-        try (Connection connection = connectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(EXIST)) {
-
-            preparedStatement.setInt(1, id);
-            ResultSet resultSet = preparedStatement.executeQuery();
-
-            if (resultSet.next()) {
-                isExist = resultSet.getBoolean(1);
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-        return isExist;
-    }
-
+    /**
+     * Обновляет существующее задачу в базе данных.
+     *
+     * @param task задача для обновления
+     */
     @Override
     public void update(Task task) {
-        String UPDATE_VALUE = """
-                                UPDATE task
-                                SET task_name = ?, deadline = ?
-                                WHERE id = ?""";
-
-        try (Connection connection = connectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(UPDATE_VALUE)) {
-
-            preparedStatement.setString(1, task.getTaskName());
-            preparedStatement.setString(2, task.getDeadline());
-            preparedStatement.setInt(3, task.getId());
-
-            preparedStatement.executeUpdate();
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        executeTransaction(session -> {
+            session.merge(task);
+            return null;
+        });
     }
 
+    /**
+     * Находит задачу по идентификатору.
+     *
+     * @param id идентификатор задачи для поиска
+     * @return Optional, содержащий найденную задачу, или пустой, если не найден
+     * @throws ObjectNotFoundException если задачи с данным идентификатором не найден
+     */
     @Override
-    public Optional<Task> findById(Integer id) {
-        String FIND_BY_ID = "SELECT * FROM task WHERE id = ?";
+    public Optional<Task> findById(Integer id) throws ObjectNotFoundException {
+        return executeTransaction(session -> {
+           Task task = session.get(Task.class, id);
+           if (task == null) {
+               throw new ObjectNotFoundException(id, "");
+           }
 
-        Task task = null;
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+            CriteriaQuery<Task> criteriaQuery = criteriaBuilder.createQuery(Task.class);
+            Root<Task> taskRoot = criteriaQuery.from(Task.class);
+            taskRoot.fetch("employees", JoinType.LEFT);
+            criteriaQuery.select(taskRoot).where(criteriaBuilder.equal(taskRoot.get("id"), id));
 
-        try (Connection connection = connectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(FIND_BY_ID)) {
-
-            preparedStatement.setInt(1, id);
-
-            ResultSet resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) {
-                task = createTask(resultSet);
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-        return Optional.ofNullable(task);
+            return Optional.ofNullable(session.createQuery(criteriaQuery).uniqueResult());
+        });
     }
 
+    /**
+     * Находит все задачи в базе данных.
+     *
+     * @return Iterable всех задач
+     */
     @Override
     public Iterable<Task> findAll() {
-        String FIND_ALL = "SELECT * FROM task";
-
-        List<Task> tasks = new ArrayList<>();
-
-        try (Connection connection = connectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(FIND_ALL)) {
-
-            ResultSet resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                tasks.add(createTask(resultSet));
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-        return tasks;
+        return executeTransaction(session -> {
+           CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+           CriteriaQuery<Task> criteriaQuery = criteriaBuilder.createQuery(Task.class);
+           Root<Task> taskRoot = criteriaQuery.from(Task.class);
+           taskRoot.fetch("employees", JoinType.LEFT);
+           criteriaQuery.select(taskRoot);
+           return session.createQuery(criteriaQuery).getResultList();
+        });
     }
 
+    /**
+     * Проверяет, существует ли задача по заданному идентификатору.
+     *
+     * @param id идентификатор задачи для проверки
+     * @return true, если задача существует, иначе false
+     */
+    @Override
+    public boolean existsById(Integer id) {
+        return executeTransaction(session -> {
+           Task task = session.get(Task.class, id);
+           return task != null;
+        });
+    }
+
+    /**
+     * Находит всех сотрудников, закрепленные за заданной задачей
+     *
+     * @param taskId идентификатор задачи
+     * @return Iterable сотрудников, закрепленные за задачей
+     */
     @Override
     public Iterable<Employee> findEmployeesByTaskId(Integer taskId) {
-        String FIND_TASKS_BY_EMPLOYEE_ID = """
-                                            SELECT *
-                                            FROM employee e
-                                            INNER JOIN assignments a ON e.id = a.employee_id
-                                            WHERE a.task_id = ?""";
-
-        List<Employee> employees = new ArrayList<>();
-
-        try (Connection connection = connectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(FIND_TASKS_BY_EMPLOYEE_ID)) {
-
-            preparedStatement.setInt(1, taskId);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()) {
-                employees.add(new Employee(
-                        resultSet.getInt("id"),
-                        resultSet.getString("firstname"),
-                        resultSet.getString("lastname"),
-                        resultSet.getString("email"),
-                        resultSet.getInt("age"),
-                        null,
-                        null
-                ));
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-        return employees;
+        return executeTransaction(session -> {
+           CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+           CriteriaQuery<Employee> criteriaQuery = criteriaBuilder.createQuery(Employee.class);
+           Root<Employee> employeeRoot = criteriaQuery.from(Employee.class);
+           Join<Employee, Task> assignmentsJoin = employeeRoot.join("tasks", JoinType.LEFT);
+           Predicate taskPredicate = criteriaBuilder.equal(assignmentsJoin.get("id"), taskId);
+           criteriaQuery.select(employeeRoot).where(taskPredicate);
+           return session.createQuery(criteriaQuery).getResultList();
+        });
     }
 
-    private Task createTask(ResultSet resultSet) throws SQLException {
-        Set<Employee> employees = SetFromIterable.toSet(findEmployeesByTaskId(resultSet.getInt("id")));
-
-        return new Task(
-                resultSet.getInt("id"),
-                resultSet.getString("task_name"),
-                resultSet.getString("deadline"),
-                employees
-        );
+    /**
+     * Выполняет операцию с базой данных в рамках транзакции.
+     *
+     * @param operation операция для выполнения
+     * @param <T> тип результата
+     * @return результат операции
+     */
+    private <T> T executeTransaction(TransactionOperation<T> operation) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            T result = operation.execute(session);
+            transaction.commit();
+            return result;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
+            throw new RuntimeException("Ошибка при выполнении операции в транзакции!\n" + e.getMessage());
+        }
     }
 }

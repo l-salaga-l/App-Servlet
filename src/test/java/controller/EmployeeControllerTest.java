@@ -1,15 +1,20 @@
 package controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import org.example.appservlet.controller.EmployeeController;
-import org.example.appservlet.exception.NotFoundException;
-import org.example.appservlet.model.Employee;
-import org.example.appservlet.model.Task;
+import org.example.appservlet.service.dto.EmployeeDTO;
+import org.example.appservlet.service.dto.TaskDTO;
 import org.example.appservlet.service.impl.EmployeeServiceImpl;
+
+import org.hibernate.ObjectNotFoundException;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -44,8 +49,8 @@ public class EmployeeControllerTest {
 
     @Test
     public void testGetAllEmployeesSuccess() throws Exception {
-        Iterable<Employee> employees = Arrays.asList(new Employee(1, "Анна", "Смирнова", "anna.smirnova@example.ru", 30, null, null),
-                                                    new Employee(2, "Алексей", "Петров", "aleksey.petrov@example.com", 27, null, null));
+        Iterable<EmployeeDTO> employees = Arrays.asList(new EmployeeDTO(1, "Анна", "Смирнова", "anna.smirnova@example.ru", 30),
+                                                    new EmployeeDTO(2, "Алексей", "Петров", "aleksey.petrov@example.com", 27));
 
         when(request.getRequestURI()).thenReturn("/employee/");
         when(employeeService.findAll()).thenReturn(employees);
@@ -59,7 +64,7 @@ public class EmployeeControllerTest {
 
     @Test
     public void testGetEmployeeByIdSuccess() throws Exception {
-        Employee employee = new Employee(1, "Анна", "Смирнова", "anna.smirnova@example.ru", 30, null, null);
+        EmployeeDTO employee = new EmployeeDTO(1, "Анна", "Смирнова", "anna.smirnova@example.ru", 30);
 
         when(request.getRequestURI()).thenReturn("/employee/1");
         when(employeeService.findById(1)).thenReturn(employee);
@@ -74,7 +79,7 @@ public class EmployeeControllerTest {
     @Test
     public void testGetEmployeeByIdNotFound() throws Exception {
         when(request.getRequestURI()).thenReturn("/employee/1");
-        when(employeeService.findById(1)).thenThrow(new NotFoundException());
+        when(employeeService.findById(1)).thenThrow(new ObjectNotFoundException(1,""));
         when(response.getWriter()).thenReturn(printWriter);
 
         controller.doGet(request, response);
@@ -96,7 +101,7 @@ public class EmployeeControllerTest {
 
     @Test public void testGetEmployeeTasksSuccess() throws Exception {
         when(request.getRequestURI()).thenReturn("/employee/1/tasks");
-        when(employeeService.findTasksByEmployeeId(1)).thenReturn(Arrays.asList(new Task(), new Task()));
+        when(employeeService.findTasksByEmployeeId(1)).thenReturn(Arrays.asList(new TaskDTO(), new TaskDTO()));
         when(response.getWriter()).thenReturn(printWriter);
 
         controller.doGet(request, response);
@@ -108,7 +113,7 @@ public class EmployeeControllerTest {
     @Test
     public void testGetEmployeeTasksNotFound() throws Exception {
         when(request.getRequestURI()).thenReturn("/employee/1/tasks");
-        when(employeeService.findTasksByEmployeeId(1)).thenThrow(new NotFoundException());
+        when(employeeService.findTasksByEmployeeId(1)).thenThrow(new ObjectNotFoundException(1,""));
         when(response.getWriter()).thenReturn(printWriter);
 
         controller.doGet(request, response);
@@ -130,8 +135,8 @@ public class EmployeeControllerTest {
 
     @Test
     public void testPostEmployeeSuccess() throws Exception {
-        Employee employeeToUpdate = new Employee(0, "Мария", null, "maria.sokolova@example.ru", 0, null, null);
-        Employee existingEmployee = new Employee(1, "Мария", "Соколова", "sokolova@gmail.ru", 30, null, null);
+        EmployeeDTO employeeToUpdate = new EmployeeDTO(0, "Мария", null, "maria.sokolova@example.ru", 0);
+        EmployeeDTO existingEmployee = new EmployeeDTO(1, "Мария", "Соколова", "sokolova@gmail.ru", 30);
 
         when(request.getRequestURI()).thenReturn("/employee/1");
         when(response.getWriter()).thenReturn(printWriter);
@@ -153,15 +158,15 @@ public class EmployeeControllerTest {
         when(request.getRequestURI()).thenReturn("/employee/1");
         when(response.getWriter()).thenReturn(printWriter);
 
-        Employee employee = new Employee(1, "Анна", "Смирнова", "anna.smirnova@example.ru", 30, null, null);
+        EmployeeDTO employee = new EmployeeDTO(1, "Анна", "Смирнова", "anna.smirnova@example.ru", 30);
         InputStream inputStream = new ByteArrayInputStream(new ObjectMapper().writeValueAsBytes(employee));
         DelegatingServletInputStream delegatingServletInputStream = new DelegatingServletInputStream(inputStream);
 
         when(request.getInputStream()).thenReturn(delegatingServletInputStream);
 
-        Mockito.doThrow(new NotFoundException())
+        Mockito.doThrow(new ObjectNotFoundException(1, ""))
                 .when(employeeService)
-                .update(any(Employee.class));
+                .update(any(EmployeeDTO.class));
 
         controller.doPost(request, response);
 
@@ -174,7 +179,7 @@ public class EmployeeControllerTest {
         when(request.getRequestURI()).thenReturn("/employee/");
         when(response.getWriter()).thenReturn(printWriter);
 
-        Employee new_employee = new Employee(1, "Мария", "Соколова", "sokolova@gmail.ru", 30, null, null);
+        EmployeeDTO new_employee = new EmployeeDTO(1, "Мария", "Соколова", "sokolova@gmail.ru", 30);
         InputStream inputStream = new ByteArrayInputStream(new ObjectMapper().writeValueAsBytes(new_employee));
         DelegatingServletInputStream delegatingServletInputStream = new DelegatingServletInputStream(inputStream);
         when(request.getInputStream()).thenReturn(delegatingServletInputStream);

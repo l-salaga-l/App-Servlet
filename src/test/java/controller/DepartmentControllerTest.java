@@ -1,15 +1,20 @@
 package controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import org.example.appservlet.controller.DepartmentController;
-import org.example.appservlet.exception.NotFoundException;
-import org.example.appservlet.model.Department;
-import org.example.appservlet.model.Employee;
+import org.example.appservlet.service.dto.DepartmentDTO;
+import org.example.appservlet.service.dto.EmployeeDTO;
 import org.example.appservlet.service.impl.DepartmentServiceImpl;
+
+import org.hibernate.ObjectNotFoundException;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -47,8 +52,8 @@ public class DepartmentControllerTest {
 
     @Test
     public void testGetAllDepartmentsSuccess() throws Exception {
-        Iterable<Department> departments = Arrays.asList(new Department(1, "Маркетинг", "Москва", null),
-                                                        new Department(2, "ИТ-отдел", "Казань", null));
+        Iterable<DepartmentDTO> departments = Arrays.asList(new DepartmentDTO(1, "Маркетинг", "Москва"),
+                                                        new DepartmentDTO(2, "ИТ-отдел", "Казань"));
 
         when(request.getRequestURI()).thenReturn("/department/");
         when(departmentService.findAll()).thenReturn(departments);
@@ -62,7 +67,7 @@ public class DepartmentControllerTest {
 
     @Test
     public void testGetDepartmentByIdSuccess() throws Exception {
-        Department department = new Department(1, "Маркетинг", "Москва", null);
+        DepartmentDTO department = new DepartmentDTO(1, "Маркетинг", "Москва");
 
         when(request.getRequestURI()).thenReturn("/department/1");
         when(departmentService.findById(1)).thenReturn(department);
@@ -77,7 +82,7 @@ public class DepartmentControllerTest {
     @Test
     public void testGetDepartmentByIdNotFound() throws Exception {
         when(request.getRequestURI()).thenReturn("/department/1");
-        when(departmentService.findById(1)).thenThrow(new NotFoundException());
+        when(departmentService.findById(1)).thenThrow(new ObjectNotFoundException(1,""));
         when(response.getWriter()).thenReturn(printWriter);
 
         controller.doGet(request, response);
@@ -99,19 +104,19 @@ public class DepartmentControllerTest {
 
     @Test public void testGetEmployeesSuccess() throws Exception {
         when(request.getRequestURI()).thenReturn("/department/1/employees");
-        when(departmentService.findEmployeeByDepartmentId(1)).thenReturn(Arrays.asList(new Employee(), new Employee()));
+        when(departmentService.findEmployeeByDepartmentId(1)).thenReturn(Arrays.asList(new EmployeeDTO(), new EmployeeDTO()));
         when(response.getWriter()).thenReturn(printWriter);
 
         controller.doGet(request, response);
 
         verify(response).setStatus(HttpServletResponse.SC_OK);
         verify(printWriter).write(any(String.class));
-    }
+     }
 
     @Test
     public void testGetEmployeesNotFound() throws Exception {
         when(request.getRequestURI()).thenReturn("/department/1/employees");
-        when(departmentService.findEmployeeByDepartmentId(1)).thenThrow(new NotFoundException());
+        when(departmentService.findEmployeeByDepartmentId(1)).thenThrow(new ObjectNotFoundException(1,""));
         when(response.getWriter()).thenReturn(printWriter);
 
         controller.doGet(request, response);
@@ -133,8 +138,8 @@ public class DepartmentControllerTest {
 
     @Test
     public void testPostDepartmentSuccess() throws Exception {
-        Department departmentToUpdate = new Department(0, "Маркетинг", "Нижний Новгород", null);
-        Department existingDepartment = new Department(1, "Маркетинг", "Москва", null);
+        DepartmentDTO departmentToUpdate = new DepartmentDTO(0, "Маркетинг", "Нижний Новгород");
+        DepartmentDTO existingDepartment = new DepartmentDTO(1, "Маркетинг", "Москва");
 
         when(request.getRequestURI()).thenReturn("/department/1");
         when(response.getWriter()).thenReturn(printWriter);
@@ -156,15 +161,15 @@ public class DepartmentControllerTest {
         when(request.getRequestURI()).thenReturn("/department/1");
         when(response.getWriter()).thenReturn(printWriter);
 
-        Department department = new Department(1, "Маркетинг", "Москва", null);
+        DepartmentDTO department = new DepartmentDTO(1, "Маркетинг", "Москва");
         InputStream inputStream = new ByteArrayInputStream(new ObjectMapper().writeValueAsBytes(department));
         DelegatingServletInputStream delegatingServletInputStream = new DelegatingServletInputStream(inputStream);
 
         when(request.getInputStream()).thenReturn(delegatingServletInputStream);
 
-        Mockito.doThrow(new NotFoundException())
+        Mockito.doThrow(new ObjectNotFoundException(1,""))
                 .when(departmentService)
-                .update(any(Department.class));
+                .update(any(DepartmentDTO.class));
 
         controller.doPost(request, response);
 
@@ -177,7 +182,7 @@ public class DepartmentControllerTest {
         when(request.getRequestURI()).thenReturn("/department/");
         when(response.getWriter()).thenReturn(printWriter);
 
-        Department department = new Department(1, "Маркетинг", "Москва", null);
+        DepartmentDTO department = new DepartmentDTO(1, "Маркетинг", "Москва");
         InputStream inputStream = new ByteArrayInputStream(new ObjectMapper().writeValueAsBytes(department));
         DelegatingServletInputStream delegatingServletInputStream = new DelegatingServletInputStream(inputStream);
         when(request.getInputStream()).thenReturn(delegatingServletInputStream);

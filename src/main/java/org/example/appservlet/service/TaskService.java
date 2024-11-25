@@ -1,9 +1,9 @@
 package org.example.appservlet.service;
 
-import org.example.appservlet.exception.NotFoundException;
-import org.example.appservlet.model.Employee;
-import org.example.appservlet.model.Task;
+import org.example.appservlet.service.dto.EmployeeDTO;
+import org.example.appservlet.service.dto.TaskDTO;
+import org.hibernate.ObjectNotFoundException;
 
-public interface TaskService extends Service<Task> {
-    Iterable<Employee> findEmployeesByTaskId(Integer taskId) throws NotFoundException;
+public interface TaskService extends Service<TaskDTO> {
+    Iterable<EmployeeDTO> findEmployeesByTaskId(Integer taskId) throws ObjectNotFoundException;
 }

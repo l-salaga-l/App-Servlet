@@ -2,17 +2,20 @@ package org.example.appservlet.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.example.appservlet.exception.NotFoundException;
-import org.example.appservlet.model.Employee;
-import org.example.appservlet.model.Task;
+
 import org.example.appservlet.repository.impl.EmployeeRepositoryImpl;
 import org.example.appservlet.service.EmployeeService;
+import org.example.appservlet.service.dto.EmployeeDTO;
+import org.example.appservlet.service.dto.TaskDTO;
 import org.example.appservlet.service.impl.EmployeeServiceImpl;
 import org.example.appservlet.util.ExtractNumber;
+
+import org.hibernate.ObjectNotFoundException;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -48,11 +51,11 @@ public class EmployeeController extends HttpServlet {
         } catch (NumberFormatException e) {
             response = "Неправильный формат идентификатора!";
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        } catch (NotFoundException e) {
+        } catch (ObjectNotFoundException e) {
             response = "Нет записи с данным ID!";
             resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
         } catch (JsonProcessingException e) {
-            response = "Ошибка в обработке запроса!";
+            response = "Ошибка в обработке запроса!" + e.getMessage();
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
 
@@ -75,7 +78,7 @@ public class EmployeeController extends HttpServlet {
         } catch (NumberFormatException e) {
             response = "Неправильный формат идентификатора!";
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        } catch (NotFoundException e) {
+        } catch (ObjectNotFoundException e) {
             response = "Нет записи с данным ID!";
             resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
         } catch (IOException e) {
@@ -123,7 +126,7 @@ public class EmployeeController extends HttpServlet {
         } catch (NumberFormatException e) {
             response = "Неправильный формат идентификатора!";
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        } catch (NotFoundException e) {
+        } catch (ObjectNotFoundException e) {
             response = "Нет записи с данным ID!";
             resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }
@@ -132,29 +135,29 @@ public class EmployeeController extends HttpServlet {
     }
 
     private String handleGetAllEmployees() throws JsonProcessingException {
-        Iterable<Employee> employees = employeeService.findAll();
+        Iterable<EmployeeDTO> employees = employeeService.findAll();
 
         return new ObjectMapper().writeValueAsString(employees);
     }
 
-    private String handleGetEmployeeById(HttpServletRequest req) throws NotFoundException, JsonProcessingException {
+    private String handleGetEmployeeById(HttpServletRequest req) throws ObjectNotFoundException, JsonProcessingException {
         Integer employeeId = ExtractNumber.apply(req.getRequestURI());
-        Employee employee = employeeService.findById(employeeId);
+        EmployeeDTO employee = employeeService.findById(employeeId);
 
         return new ObjectMapper().writeValueAsString(employee);
     }
 
-    private String handleGetTasks(HttpServletRequest req) throws NotFoundException, JsonProcessingException {
+    private String handleGetTasks(HttpServletRequest req) throws ObjectNotFoundException, JsonProcessingException {
         Integer employeeId = ExtractNumber.apply(req.getRequestURI());
-        Iterable<Task> tasks = employeeService.findTasksByEmployeeId(employeeId);
+        Iterable<TaskDTO> tasks = employeeService.findTasksByEmployeeId(employeeId);
 
         return new ObjectMapper().writeValueAsString(tasks);
     }
 
-    private String handlePostUpdate(HttpServletRequest req) throws NotFoundException, IOException {
+    private String handlePostUpdate(HttpServletRequest req) throws ObjectNotFoundException, IOException {
         Integer employeeId = ExtractNumber.apply(req.getRequestURI());
 
-        Employee employee_new = new ObjectMapper().readValue(req.getInputStream(), Employee.class);
+        EmployeeDTO employee_new = new ObjectMapper().readValue(req.getInputStream(), EmployeeDTO.class);
         employee_new.setId(employeeId);
 
         employeeService.update(employee_new);
@@ -163,13 +166,13 @@ public class EmployeeController extends HttpServlet {
     }
 
     private String handlePutNewEmployee(HttpServletRequest req) throws IOException {
-        Employee employee = new ObjectMapper().readValue(req.getInputStream(), Employee.class);
+        EmployeeDTO employee = new ObjectMapper().readValue(req.getInputStream(), EmployeeDTO.class);
         employee = employeeService.save(employee);
 
         return "Данные успешно сохранены.\n" + new ObjectMapper().writeValueAsString(employee);
     }
 
-    private String handleDelete(HttpServletRequest req) throws NumberFormatException, NotFoundException {
+    private String handleDelete(HttpServletRequest req) throws NumberFormatException, ObjectNotFoundException {
         Integer employeeId = ExtractNumber.apply(req.getRequestURI());
         employeeService.deleteById(employeeId);
 
