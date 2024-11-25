@@ -1,5 +1,14 @@
 package org.example.appservlet.model;
 
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -9,83 +18,44 @@ import java.util.Set;
  * Many to One: Employee -> Department<br>
  * Many to Many: Employee <-> Task
  */
+
+@Setter
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
 public class Employee {
+    @Id
+    @NotNull
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @Column(name = "id")
     private Integer id;
+
+    @Column(name = "firstname")
     private String firstname;
+
+    @Column(name = "lastname")
     private String lastname;
+
+    @Email
+    @Column(name = "email")
     private String email;
+
+    @Column(name = "age")
     private int age;
+
+    @ManyToOne
+    @JoinColumn(name = "department_id", nullable = false)
     private Department department;
-    private Set<Task> tasks;
 
-    public Employee() {}
+    @ManyToMany(fetch = FetchType.LAZY, mappedBy = "employees")
+    private Set<Task> tasks = new HashSet<>(0);
 
-    public Employee(Integer id, String firstname, String lastname, String email, int age, Department department, Set<Task> tasks) {
-        this.id = id;
-        this.firstname = firstname;
-        this.lastname = lastname;
-        this.email = email;
-        this.age = age;
-        this.department = department;
-        this.tasks = tasks;
+    public void addTask(Task task) {
+        tasks.add(task);
     }
 
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public String getFirstname() {
-        return firstname;
-    }
-
-    public void setFirstname(String firstname) {
-        this.firstname = firstname;
-    }
-
-    public String getLastname() {
-        return lastname;
-    }
-
-    public void setLastname(String lastname) {
-        this.lastname = lastname;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public int getAge() {
-        return age;
-    }
-
-    public void setAge(int age) {
-        this.age = age;
-    }
-
-    public Department getDepartment() {
-        return department;
-    }
-
-    public void setDepartment(Department department) {
-        this.department = department;
-    }
-
-    public Set<Task> getTasks() {
-        if (tasks == null) {
-            tasks = new HashSet<Task>();
-        }
-        return tasks;
-    }
-
-    public void setTasks(Set<Task> tasks) {
-        this.tasks = tasks;
+    public void removeTask(Task task) {
+        tasks.remove(task);
     }
 }
