@@ -1,15 +1,20 @@
 package controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import org.example.appservlet.controller.TaskController;
-import org.example.appservlet.exception.NotFoundException;
-import org.example.appservlet.model.Employee;
-import org.example.appservlet.model.Task;
+import org.example.appservlet.service.dto.EmployeeDTO;
+import org.example.appservlet.service.dto.TaskDTO;
 import org.example.appservlet.service.impl.TaskServiceImpl;
+
+import org.hibernate.ObjectNotFoundException;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -47,8 +52,8 @@ public class TaskControllerTest {
 
     @Test
     public void testGetAllTasksSuccess() throws Exception {
-        Iterable<Task> tasks = Arrays.asList(new Task(1, "Обновление системы", "2024-10-30", null),
-                new Task(2, "Анализ рынка", "2024-11-15", null));
+        Iterable<TaskDTO> tasks = Arrays.asList(new TaskDTO(1, "Обновление системы", "2024-10-30"),
+                new TaskDTO(2, "Анализ рынка", "2024-11-15"));
 
         when(request.getRequestURI()).thenReturn("/task/");
         when(taskService.findAll()).thenReturn(tasks);
@@ -62,7 +67,7 @@ public class TaskControllerTest {
 
     @Test
     public void testGetTaskByIdSuccess() throws Exception {
-        Task task = new Task(1, "Обновление системы", "2024-10-30", null);
+        TaskDTO task = new TaskDTO(1, "Обновление системы", "2024-10-30");
 
         when(request.getRequestURI()).thenReturn("/task/1");
         when(taskService.findById(1)).thenReturn(task);
@@ -77,7 +82,7 @@ public class TaskControllerTest {
     @Test
     public void testGetTaskByIdNotFound() throws Exception {
         when(request.getRequestURI()).thenReturn("/task/1");
-        when(taskService.findById(1)).thenThrow(new NotFoundException());
+        when(taskService.findById(1)).thenThrow(new ObjectNotFoundException(1,""));
         when(response.getWriter()).thenReturn(printWriter);
 
         controller.doGet(request, response);
@@ -99,7 +104,7 @@ public class TaskControllerTest {
 
     @Test public void testGetEmployeesSuccess() throws Exception {
         when(request.getRequestURI()).thenReturn("/task/1/employees");
-        when(taskService.findEmployeesByTaskId(1)).thenReturn(Arrays.asList(new Employee(), new Employee()));
+        when(taskService.findEmployeesByTaskId(1)).thenReturn(Arrays.asList(new EmployeeDTO(), new EmployeeDTO()));
         when(response.getWriter()).thenReturn(printWriter);
 
         controller.doGet(request, response);
@@ -111,7 +116,7 @@ public class TaskControllerTest {
     @Test
     public void testGetEmployeesNotFound() throws Exception {
         when(request.getRequestURI()).thenReturn("/task/1/employees");
-        when(taskService.findEmployeesByTaskId(1)).thenThrow(new NotFoundException());
+        when(taskService.findEmployeesByTaskId(1)).thenThrow(new ObjectNotFoundException(1,""));
         when(response.getWriter()).thenReturn(printWriter);
 
         controller.doGet(request, response);
@@ -133,8 +138,8 @@ public class TaskControllerTest {
 
     @Test
     public void testPostTaskSuccess() throws Exception {
-        Task taskToUpdate = new Task(0, "Обновление системы", "2024-12-30", null);
-        Task existingTask = new Task(1, "Обновление системы", "2024-10-30", null);
+        TaskDTO taskToUpdate = new TaskDTO(0, "Обновление системы", "2024-12-30");
+        TaskDTO existingTask = new TaskDTO(1, "Обновление системы", "2024-10-30");
 
         when(request.getRequestURI()).thenReturn("/task/1");
         when(response.getWriter()).thenReturn(printWriter);
@@ -156,15 +161,15 @@ public class TaskControllerTest {
         when(request.getRequestURI()).thenReturn("/task/1");
         when(response.getWriter()).thenReturn(printWriter);
 
-        Task task = new Task(1, "Обновление системы", "2024-10-30", null);
+        TaskDTO task = new TaskDTO(1, "Обновление системы", "2024-10-30");
         InputStream inputStream = new ByteArrayInputStream(new ObjectMapper().writeValueAsBytes(task));
         DelegatingServletInputStream delegatingServletInputStream = new DelegatingServletInputStream(inputStream);
 
         when(request.getInputStream()).thenReturn(delegatingServletInputStream);
 
-        Mockito.doThrow(new NotFoundException())
+        Mockito.doThrow(new ObjectNotFoundException(1,""))
                 .when(taskService)
-                .update(any(Task.class));
+                .update(any(TaskDTO.class));
 
         controller.doPost(request, response);
 
@@ -177,7 +182,7 @@ public class TaskControllerTest {
         when(request.getRequestURI()).thenReturn("/task/");
         when(response.getWriter()).thenReturn(printWriter);
 
-        Task task = new Task(1, "Обновление системы", "2024-10-30", null);
+        TaskDTO task = new TaskDTO(1, "Обновление системы", "2024-10-30");
         InputStream inputStream = new ByteArrayInputStream(new ObjectMapper().writeValueAsBytes(task));
         DelegatingServletInputStream delegatingServletInputStream = new DelegatingServletInputStream(inputStream);
         when(request.getInputStream()).thenReturn(delegatingServletInputStream);
