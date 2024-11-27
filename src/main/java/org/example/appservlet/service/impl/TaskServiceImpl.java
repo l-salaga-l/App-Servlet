@@ -1,10 +1,15 @@
 package org.example.appservlet.service.impl;
 
-import org.example.appservlet.exception.NotFoundException;
 import org.example.appservlet.model.Employee;
 import org.example.appservlet.model.Task;
 import org.example.appservlet.repository.TaskRepository;
 import org.example.appservlet.service.TaskService;
+import org.example.appservlet.service.dto.EmployeeDTO;
+import org.example.appservlet.service.dto.TaskDTO;
+import org.example.appservlet.service.mapper.EmployeeMapper;
+import org.example.appservlet.service.mapper.TaskMapper;
+
+import org.hibernate.ObjectNotFoundException;
 
 public class TaskServiceImpl implements TaskService {
     private final TaskRepository taskRepository;
@@ -14,58 +19,44 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public Task save(Task task) {
-        return taskRepository.save(task);
+    public TaskDTO save(TaskDTO taskDTO) {
+        Task task = TaskMapper.toEntity(taskDTO);
+        Task savedTask = taskRepository.save(task);
+        return TaskMapper.toDto(savedTask);
     }
 
     @Override
-    public Iterable<Task> findAll() {
-        return taskRepository.findAll();
+    public Iterable<TaskDTO> findAll() {
+        Iterable<Task> tasks = taskRepository.findAll();
+        return TaskMapper.toDto(tasks);
     }
 
     @Override
-    public Task findById(Integer id) throws NotFoundException {
-        return taskRepository.findById(id).orElseThrow(NotFoundException::new);
+    public TaskDTO findById(Integer id) throws ObjectNotFoundException {
+        Task task = taskRepository.findById(id).orElseThrow();
+        return TaskMapper.toDto(task);
     }
 
     @Override
-    public void update(Task task) throws NotFoundException {
-        try {
-            checkExist(task.getId());
-            taskRepository.update(fillNullFields(task));
-        } catch (NotFoundException e) {
-            throw new NotFoundException();
-        }
+    public void update(TaskDTO taskDTO) throws ObjectNotFoundException {
+        Task task = TaskMapper.toEntity(taskDTO);
+        Task taskUpdated = fillNullFields(task);
+        taskRepository.update(taskUpdated);
     }
 
     @Override
-    public void deleteById(Integer id) throws NotFoundException {
-        try {
-            checkExist(id);
-            taskRepository.deleteById(id);
-        } catch (NotFoundException e) {
-            throw new NotFoundException();
-        }
+    public void deleteById(Integer id) throws ObjectNotFoundException {
+        taskRepository.deleteById(id);
     }
 
     @Override
-    public Iterable<Employee> findEmployeesByTaskId(Integer taskId) throws NotFoundException {
-        try {
-            checkExist(taskId);
-        } catch (NotFoundException e) {
-            throw new NotFoundException();
-        }
-        return taskRepository.findEmployeesByTaskId(taskId);
+    public Iterable<EmployeeDTO> findEmployeesByTaskId(Integer taskId) throws ObjectNotFoundException {
+        Iterable<Employee> employees = taskRepository.findEmployeesByTaskId(taskId);
+        return EmployeeMapper.toDto(employees);
     }
 
-    private void checkExist(Integer id) throws NotFoundException {
-        if (!taskRepository.existsById(id)) {
-            throw new NotFoundException();
-        }
-    }
-
-    private Task fillNullFields(Task task_new) throws NotFoundException {
-        Task task_old = findById(task_new.getId());
+    private Task fillNullFields(Task task_new) throws ObjectNotFoundException {
+        Task task_old = taskRepository.findById(task_new.getId()).orElseThrow();
 
         if (task_new.getTaskName() == null) {
             task_new.setTaskName(task_old.getTaskName());

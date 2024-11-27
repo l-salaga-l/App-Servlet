@@ -1,12 +1,15 @@
 package org.example.appservlet.service.impl;
 
-import org.example.appservlet.exception.NotFoundException;
 import org.example.appservlet.model.Department;
 import org.example.appservlet.model.Employee;
 import org.example.appservlet.repository.DepartmentRepository;
 import org.example.appservlet.service.DepartmentService;
+import org.example.appservlet.service.dto.DepartmentDTO;
+import org.example.appservlet.service.dto.EmployeeDTO;
+import org.example.appservlet.service.mapper.DepartmentMapper;
+import org.example.appservlet.service.mapper.EmployeeMapper;
 
-import java.util.ArrayList;
+import org.hibernate.ObjectNotFoundException;
 
 public class DepartmentServiceImpl implements DepartmentService {
     private final DepartmentRepository departmentRepository;
@@ -16,58 +19,44 @@ public class DepartmentServiceImpl implements DepartmentService {
     }
 
     @Override
-    public Department save(Department department) {
-        return departmentRepository.save(department);
+    public DepartmentDTO save(DepartmentDTO departmentDTO) {
+        Department department = DepartmentMapper.toEntity(departmentDTO);
+        Department savedDepartment = departmentRepository.save(department);
+        return DepartmentMapper.toDto(savedDepartment);
     }
 
     @Override
-    public Iterable<Department> findAll() {
-        return departmentRepository.findAll();
+    public Iterable<DepartmentDTO> findAll() {
+        Iterable<Department> departments = departmentRepository.findAll();
+        return DepartmentMapper.toDto(departments);
     }
 
     @Override
-    public Department findById(Integer id) throws NotFoundException {
-        return departmentRepository.findById(id).orElseThrow(NotFoundException::new);
+    public DepartmentDTO findById(Integer id) throws ObjectNotFoundException {
+        Department department = departmentRepository.findById(id).orElseThrow();
+        return DepartmentMapper.toDto(department);
     }
 
     @Override
-    public void update(Department department) throws NotFoundException {
-        try {
-            checkExist(department.getId());
-            departmentRepository.update(fillNullFields(department));
-        } catch (NotFoundException e) {
-            throw new NotFoundException();
-        }
+    public void update(DepartmentDTO departmentDTO) throws ObjectNotFoundException {
+        Department departmentNew = DepartmentMapper.toEntity(departmentDTO);
+        Department departmentUpdated = fillNullFields(departmentNew);
+        departmentRepository.save(departmentUpdated);
     }
 
     @Override
-    public void deleteById(Integer id) throws NotFoundException {
-        try {
-            checkExist(id);
-            departmentRepository.deleteById(id);
-        } catch (NotFoundException e) {
-            throw new NotFoundException();
-        }
+    public void deleteById(Integer id) throws ObjectNotFoundException {
+        departmentRepository.deleteById(id);
     }
 
     @Override
-    public Iterable<Employee> findEmployeeByDepartmentId(Integer departmentId) throws NotFoundException {
-        try {
-            checkExist(departmentId);
-        } catch (NotFoundException e) {
-            throw new NotFoundException();
-        }
-        return departmentRepository.findEmployeesByDepartmentId(departmentId);
+    public Iterable<EmployeeDTO> findEmployeeByDepartmentId(Integer departmentId) throws ObjectNotFoundException {
+        Iterable<Employee> employees = departmentRepository.findEmployeesByDepartmentId(departmentId);
+        return EmployeeMapper.toDto(employees);
     }
 
-    private void checkExist(Integer id) throws NotFoundException {
-        if (!departmentRepository.existsById(id)) {
-            throw new NotFoundException();
-        }
-    }
-
-    private Department fillNullFields(Department department_new) throws NotFoundException {
-        Department department_old = findById(department_new.getId());
+    private Department fillNullFields(Department department_new) throws ObjectNotFoundException {
+        Department department_old = departmentRepository.findById(department_new.getId()).orElseThrow();
 
         if (department_new.getDepartmentName() == null) {
             department_new.setDepartmentName(department_old.getDepartmentName());

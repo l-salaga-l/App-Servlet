@@ -1,11 +1,16 @@
 package org.example.appservlet.service.impl;
 
-import org.example.appservlet.exception.NotFoundException;
 import org.example.appservlet.model.Employee;
 import org.example.appservlet.model.Task;
 import org.example.appservlet.repository.EmployeeRepository;
 import org.example.appservlet.repository.impl.EmployeeRepositoryImpl;
 import org.example.appservlet.service.EmployeeService;
+import org.example.appservlet.service.dto.EmployeeDTO;
+import org.example.appservlet.service.dto.TaskDTO;
+import org.example.appservlet.service.mapper.EmployeeMapper;
+import org.example.appservlet.service.mapper.TaskMapper;
+
+import org.hibernate.ObjectNotFoundException;
 
 public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeRepository repository;
@@ -15,58 +20,44 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
-    public Employee save(Employee employee) {
-        return repository.save(employee);
+    public EmployeeDTO save(EmployeeDTO employeeDTO) {
+        Employee employee = EmployeeMapper.toEntity(employeeDTO);
+        Employee savedEmployee = repository.save(employee);
+        return EmployeeMapper.toDto(savedEmployee);
     }
 
     @Override
-    public Iterable<Employee> findAll() {
-        return repository.findAll();
+    public Iterable<EmployeeDTO> findAll() {
+        Iterable<Employee> employees = repository.findAll();
+        return EmployeeMapper.toDto(employees);
     }
 
     @Override
-    public Employee findById(Integer id) throws NotFoundException {
-        return repository.findById(id).orElseThrow(NotFoundException::new);
+    public EmployeeDTO findById(Integer id) throws ObjectNotFoundException {
+        Employee employee = repository.findById(id).orElseThrow();
+        return EmployeeMapper.toDto(employee);
     }
 
     @Override
-    public void update(Employee employee) throws NotFoundException {
-        try {
-            checkExist(employee.getId());
-            repository.update(fillNullFields(employee));
-        } catch (NotFoundException e) {
-            throw new NotFoundException();
-        }
+    public void update(EmployeeDTO employeeDTO) throws ObjectNotFoundException {
+        Employee employeeNew = EmployeeMapper.toEntity(employeeDTO);
+        Employee employeeUpdated = fillNullFields(employeeNew);
+        repository.update(employeeUpdated);
     }
 
     @Override
-    public void deleteById(Integer id) throws NotFoundException {
-        try {
-            checkExist(id);
-            repository.deleteById(id);
-        } catch (NotFoundException e) {
-            throw new NotFoundException();
-        }
+    public void deleteById(Integer id) throws ObjectNotFoundException {
+        repository.deleteById(id);
     }
 
     @Override
-    public Iterable<Task> findTasksByEmployeeId(Integer employeeId) throws NotFoundException {
-        try {
-            checkExist(employeeId);
-        } catch (NotFoundException e) {
-            throw new NotFoundException();
-        }
-        return repository.findTasksByEmployeeId(employeeId);
+    public Iterable<TaskDTO> findTasksByEmployeeId(Integer employeeId) throws ObjectNotFoundException {
+        Iterable<Task> tasks = repository.findTasksByEmployeeId(employeeId);
+        return TaskMapper.toDto(tasks);
     }
 
-    private void checkExist(Integer id) throws NotFoundException {
-        if (!repository.existsById(id)) {
-            throw new NotFoundException();
-        }
-    }
-
-    private Employee fillNullFields(Employee employee_new) throws NotFoundException {
-        Employee employee_old = findById(employee_new.getId());
+    private Employee fillNullFields(Employee employee_new) throws ObjectNotFoundException {
+        Employee employee_old = repository.findById(employee_new.getId()).orElseThrow();
 
         if (employee_new.getFirstname() == null) {
             employee_new.setFirstname(employee_old.getFirstname());
@@ -86,6 +77,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         if (employee_new.getTasks() == null) {
             employee_new.setTasks(employee_old.getTasks());
         }
+
         return employee_new;
     }
 }
