@@ -1,7 +1,7 @@
-package org.example.appservlet.service.mapper;
+package org.example.appservlet.mapper;
 
 import org.example.appservlet.model.Department;
-import org.example.appservlet.service.dto.DepartmentDTO;
+import org.example.appservlet.dto.DepartmentDTO;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,7 +1,7 @@
-package org.example.appservlet.service.mapper;
+package org.example.appservlet.mapper;
 
 import org.example.appservlet.model.Task;
-import org.example.appservlet.service.dto.TaskDTO;
+import org.example.appservlet.dto.TaskDTO;
 
 import java.util.ArrayList;
 import java.util.List;

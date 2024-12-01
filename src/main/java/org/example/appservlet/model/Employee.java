@@ -1,8 +1,6 @@
 package org.example.appservlet.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotNull;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -26,9 +24,9 @@ import java.util.Set;
 @Entity
 public class Employee {
     @Id
-    @NotNull
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     @Column(name = "id")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "employee_id_seq")
+    @SequenceGenerator(name = "employee_id_seq", sequenceName = "employee_id_seq", allocationSize = 1)
     private Integer id;
 
     @Column(name = "firstname")
@@ -37,7 +35,6 @@ public class Employee {
     @Column(name = "lastname")
     private String lastname;
 
-    @Email
     @Column(name = "email")
     private String email;
 
@@ -50,12 +47,4 @@ public class Employee {
 
     @ManyToMany(fetch = FetchType.LAZY, mappedBy = "employees")
     private Set<Task> tasks = new HashSet<>(0);
-
-    public void addTask(Task task) {
-        tasks.add(task);
-    }
-
-    public void removeTask(Task task) {
-        tasks.remove(task);
-    }
 }

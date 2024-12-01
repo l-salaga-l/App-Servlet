@@ -1,4 +1,4 @@
-package org.example.appservlet.service.dto;
+package org.example.appservlet.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

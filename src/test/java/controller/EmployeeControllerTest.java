@@ -2,203 +2,120 @@ package controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.example.appservlet.controller.EmployeeController;
-import org.example.appservlet.service.dto.EmployeeDTO;
-import org.example.appservlet.service.dto.TaskDTO;
-import org.example.appservlet.service.impl.EmployeeServiceImpl;
-
-import org.hibernate.ObjectNotFoundException;
+import org.example.appservlet.controller.advice.ControllerAdvice;
+import org.example.appservlet.dto.EmployeeDTO;
+import org.example.appservlet.dto.TaskDTO;
+import org.example.appservlet.service.EmployeeService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.*;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 import java.util.Arrays;
+import java.util.List;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 public class EmployeeControllerTest {
 
-    @Mock
-    private EmployeeServiceImpl employeeService;
+    private MockMvc mockMvc;
 
     @Mock
-    private HttpServletRequest request;
-
-    @Mock
-    private HttpServletResponse response;
-
-    @Mock
-    private PrintWriter printWriter;
+    private EmployeeService employeeService;
 
     @InjectMocks
-    private EmployeeController controller;
+    private EmployeeController employeeController;
+
+    @InjectMocks
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     public void setUp() {
-        MockitoAnnotations.openMocks(this);
+        mockMvc = MockMvcBuilders.standaloneSetup(employeeController)
+                .setControllerAdvice(new ControllerAdvice())
+                .build();
     }
 
     @Test
-    public void testGetAllEmployeesSuccess() throws Exception {
-        Iterable<EmployeeDTO> employees = Arrays.asList(new EmployeeDTO(1, "Анна", "Смирнова", "anna.smirnova@example.ru", 30),
-                                                    new EmployeeDTO(2, "Алексей", "Петров", "aleksey.petrov@example.com", 27));
+    public void testGetAllEmployees() throws Exception {
+        EmployeeDTO employee1 = new EmployeeDTO();
+        EmployeeDTO employee2 = new EmployeeDTO();
+        when(employeeService.findAll()).thenReturn(Arrays.asList(employee1, employee2));
 
-        when(request.getRequestURI()).thenReturn("/employee/");
-        when(employeeService.findAll()).thenReturn(employees);
-        when(response.getWriter()).thenReturn(printWriter);
-
-        controller.doGet(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_OK);
-        verify(printWriter).write(new ObjectMapper().writeValueAsString(employees));
+        mockMvc.perform(get("/employee/")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
     @Test
-    public void testGetEmployeeByIdSuccess() throws Exception {
-        EmployeeDTO employee = new EmployeeDTO(1, "Анна", "Смирнова", "anna.smirnova@example.ru", 30);
+    public void testGetEmployeeById() throws Exception {
+        String id = "1";
+        EmployeeDTO employeeDTO = new EmployeeDTO();
+        when(employeeService.findById(id)).thenReturn(employeeDTO);
 
-        when(request.getRequestURI()).thenReturn("/employee/1");
-        when(employeeService.findById(1)).thenReturn(employee);
-        when(response.getWriter()).thenReturn(printWriter);
-
-        controller.doGet(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_OK);
-        verify(printWriter).write(any(String.class));
+        mockMvc.perform(get("/employee/{id}", id)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
     @Test
-    public void testGetEmployeeByIdNotFound() throws Exception {
-        when(request.getRequestURI()).thenReturn("/employee/1");
-        when(employeeService.findById(1)).thenThrow(new ObjectNotFoundException(1,""));
-        when(response.getWriter()).thenReturn(printWriter);
+    public void testGetEmployeeTasks() throws Exception {
+        String id = "1";
+        List<TaskDTO> tasks = Arrays.asList(new TaskDTO(), new TaskDTO());
+        when(employeeService.findTasksByEmployeeId(id)).thenReturn(tasks);
 
-        controller.doGet(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
-        verify(printWriter).write("Нет записи с данным ID!");
+        mockMvc.perform(get("/employee/{id}/tasks", id)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
     @Test
-    public void testGetEmployeeByIdBadRequest() throws Exception {
-        when(request.getRequestURI()).thenReturn("/employee/abc");
-        when(response.getWriter()).thenReturn(printWriter);
+    public void testUpdateEmployee() throws Exception {
+        String id = "1";
+        EmployeeDTO employeeDTO = new EmployeeDTO();
+        String jsonContent = objectMapper.writeValueAsString(employeeDTO);
 
-        controller.doGet(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        verify(printWriter).write("Неправильный формат идентификатора!");
-    }
-
-    @Test public void testGetEmployeeTasksSuccess() throws Exception {
-        when(request.getRequestURI()).thenReturn("/employee/1/tasks");
-        when(employeeService.findTasksByEmployeeId(1)).thenReturn(Arrays.asList(new TaskDTO(), new TaskDTO()));
-        when(response.getWriter()).thenReturn(printWriter);
-
-        controller.doGet(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_OK);
-        verify(printWriter).write(any(String.class));
+        mockMvc.perform(post("/employee/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonContent))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Данные успешно обновлены."));
     }
 
     @Test
-    public void testGetEmployeeTasksNotFound() throws Exception {
-        when(request.getRequestURI()).thenReturn("/employee/1/tasks");
-        when(employeeService.findTasksByEmployeeId(1)).thenThrow(new ObjectNotFoundException(1,""));
-        when(response.getWriter()).thenReturn(printWriter);
+    public void testCreateEmployee() throws Exception {
+        EmployeeDTO employeeDTO = new EmployeeDTO();
+        String jsonContent = objectMapper.writeValueAsString(employeeDTO);
 
-        controller.doGet(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
-        verify(printWriter).write("Нет записи с данным ID!");
+        mockMvc.perform(put("/employee/")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonContent))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.message").value("Запись успешно сохранена."));
     }
 
     @Test
-    public void testInvalidUrl() throws Exception {
-        when(request.getRequestURI()).thenReturn("/unknown/url");
-        when(response.getWriter()).thenReturn(printWriter);
+    public void testDeleteEmployee() throws Exception {
+        String id = "1";
 
-        controller.doGet(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
-        verify(printWriter).write("Не найдена страница!");
-    }
-
-    @Test
-    public void testPostEmployeeSuccess() throws Exception {
-        EmployeeDTO employeeToUpdate = new EmployeeDTO(0, "Мария", null, "maria.sokolova@example.ru", 0);
-        EmployeeDTO existingEmployee = new EmployeeDTO(1, "Мария", "Соколова", "sokolova@gmail.ru", 30);
-
-        when(request.getRequestURI()).thenReturn("/employee/1");
-        when(response.getWriter()).thenReturn(printWriter);
-
-        InputStream inputStream = new ByteArrayInputStream(new ObjectMapper().writeValueAsBytes(employeeToUpdate));
-        DelegatingServletInputStream delegatingServletInputStream = new DelegatingServletInputStream(inputStream);
-
-        when(request.getInputStream()).thenReturn(delegatingServletInputStream);
-        when(employeeService.findById(1)).thenReturn(existingEmployee);
-
-        controller.doPost(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_OK);
-        verify(printWriter).write("Данные обновлены успешно.");
-    }
-
-    @Test
-    public void testPostEmployeeNotFound() throws Exception {
-        when(request.getRequestURI()).thenReturn("/employee/1");
-        when(response.getWriter()).thenReturn(printWriter);
-
-        EmployeeDTO employee = new EmployeeDTO(1, "Анна", "Смирнова", "anna.smirnova@example.ru", 30);
-        InputStream inputStream = new ByteArrayInputStream(new ObjectMapper().writeValueAsBytes(employee));
-        DelegatingServletInputStream delegatingServletInputStream = new DelegatingServletInputStream(inputStream);
-
-        when(request.getInputStream()).thenReturn(delegatingServletInputStream);
-
-        Mockito.doThrow(new ObjectNotFoundException(1, ""))
-                .when(employeeService)
-                .update(any(EmployeeDTO.class));
-
-        controller.doPost(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
-        verify(printWriter).write("Нет записи с данным ID!");
-    }
-
-    @Test
-    public void testPutEmployeeSuccess() throws Exception {
-        when(request.getRequestURI()).thenReturn("/employee/");
-        when(response.getWriter()).thenReturn(printWriter);
-
-        EmployeeDTO new_employee = new EmployeeDTO(1, "Мария", "Соколова", "sokolova@gmail.ru", 30);
-        InputStream inputStream = new ByteArrayInputStream(new ObjectMapper().writeValueAsBytes(new_employee));
-        DelegatingServletInputStream delegatingServletInputStream = new DelegatingServletInputStream(inputStream);
-        when(request.getInputStream()).thenReturn(delegatingServletInputStream);
-
-        controller.doPut(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_CREATED);
-        verify(printWriter).write(any(String.class));
-    }
-
-    @Test
-    public void testDeleteEmployeeSuccess() throws Exception {
-        Integer employeeId = 1;
-        when(request.getRequestURI()).thenReturn("/employee/" + employeeId);
-        when(response.getWriter()).thenReturn(printWriter);
-
-        controller.doDelete(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_OK);
-        verify(employeeService, times(1)).deleteById(employeeId);
+        mockMvc.perform(delete("/employee/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Запись успешно удалена."));
     }
 }
