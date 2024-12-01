@@ -2,206 +2,120 @@ package controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.example.appservlet.controller.TaskController;
-import org.example.appservlet.service.dto.EmployeeDTO;
-import org.example.appservlet.service.dto.TaskDTO;
-import org.example.appservlet.service.impl.TaskServiceImpl;
-
-import org.hibernate.ObjectNotFoundException;
+import org.example.appservlet.controller.advice.ControllerAdvice;
+import org.example.appservlet.dto.EmployeeDTO;
+import org.example.appservlet.dto.TaskDTO;
+import org.example.appservlet.service.TaskService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.io.PrintWriter;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 import java.util.Arrays;
+import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 public class TaskControllerTest {
 
-    @Mock
-    private TaskServiceImpl taskService;
+    private MockMvc mockMvc;
 
     @Mock
-    private HttpServletRequest request;
-
-    @Mock
-    private HttpServletResponse response;
-
-    @Mock
-    private PrintWriter printWriter;
+    private TaskService taskService;
 
     @InjectMocks
-    private TaskController controller;
+    private TaskController taskController;
+
+    @InjectMocks
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     public void setUp() {
-        MockitoAnnotations.openMocks(this);
+        mockMvc = MockMvcBuilders.standaloneSetup(taskController)
+                .setControllerAdvice(new ControllerAdvice())
+                .build();
     }
 
     @Test
-    public void testGetAllTasksSuccess() throws Exception {
-        Iterable<TaskDTO> tasks = Arrays.asList(new TaskDTO(1, "Обновление системы", "2024-10-30"),
-                new TaskDTO(2, "Анализ рынка", "2024-11-15"));
+    public void testGetAllTasks() throws Exception {
+        TaskDTO task1 = new TaskDTO();
+        TaskDTO task2 = new TaskDTO();
+        when(taskService.findAll()).thenReturn(Arrays.asList(task1, task2));
 
-        when(request.getRequestURI()).thenReturn("/task/");
-        when(taskService.findAll()).thenReturn(tasks);
-        when(response.getWriter()).thenReturn(printWriter);
-
-        controller.doGet(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_OK);
-        verify(printWriter).write(new ObjectMapper().writeValueAsString(tasks));
+        mockMvc.perform(get("/task/")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
     @Test
-    public void testGetTaskByIdSuccess() throws Exception {
-        TaskDTO task = new TaskDTO(1, "Обновление системы", "2024-10-30");
+    public void testGetTaskById() throws Exception {
+        String id = "1";
+        TaskDTO taskDTO = new TaskDTO();
+        when(taskService.findById(id)).thenReturn(taskDTO);
 
-        when(request.getRequestURI()).thenReturn("/task/1");
-        when(taskService.findById(1)).thenReturn(task);
-        when(response.getWriter()).thenReturn(printWriter);
-
-        controller.doGet(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_OK);
-        verify(printWriter).write(any(String.class));
+        mockMvc.perform(get("/task/{id}", id)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
     @Test
-    public void testGetTaskByIdNotFound() throws Exception {
-        when(request.getRequestURI()).thenReturn("/task/1");
-        when(taskService.findById(1)).thenThrow(new ObjectNotFoundException(1,""));
-        when(response.getWriter()).thenReturn(printWriter);
+    public void testGetEmployeesByTask() throws Exception {
+        String id = "1";
+        List<EmployeeDTO> employees = Arrays.asList(new EmployeeDTO(), new EmployeeDTO());
+        when(taskService.findEmployeesByTaskId(id)).thenReturn(employees);
 
-        controller.doGet(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
-        verify(printWriter).write("Нет записи с данным ID!");
+        mockMvc.perform(get("/task/{id}/employees", id)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
     @Test
-    public void testGetTaskByIdBadRequest() throws Exception {
-        when(request.getRequestURI()).thenReturn("/task/abc");
-        when(response.getWriter()).thenReturn(printWriter);
+    public void testUpdateTask() throws Exception {
+        String id = "1";
+        TaskDTO taskDTO = new TaskDTO();
+        String jsonContent = objectMapper.writeValueAsString(taskDTO);
 
-        controller.doGet(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        verify(printWriter).write("Неправильный формат идентификатора!");
-    }
-
-    @Test public void testGetEmployeesSuccess() throws Exception {
-        when(request.getRequestURI()).thenReturn("/task/1/employees");
-        when(taskService.findEmployeesByTaskId(1)).thenReturn(Arrays.asList(new EmployeeDTO(), new EmployeeDTO()));
-        when(response.getWriter()).thenReturn(printWriter);
-
-        controller.doGet(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_OK);
-        verify(printWriter).write(any(String.class));
+        mockMvc.perform(post("/task/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonContent))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Данные успешно обновлены."));
     }
 
     @Test
-    public void testGetEmployeesNotFound() throws Exception {
-        when(request.getRequestURI()).thenReturn("/task/1/employees");
-        when(taskService.findEmployeesByTaskId(1)).thenThrow(new ObjectNotFoundException(1,""));
-        when(response.getWriter()).thenReturn(printWriter);
+    public void testCreateTask() throws Exception {
+        TaskDTO taskDTO = new TaskDTO();
+        String jsonContent = objectMapper.writeValueAsString(taskDTO);
 
-        controller.doGet(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
-        verify(printWriter).write("Нет записи с данным ID!");
+        mockMvc.perform(put("/task/")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonContent))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.message").value("Запись успешно сохранена."));
     }
 
     @Test
-    public void testInvalidUrl() throws Exception {
-        when(request.getRequestURI()).thenReturn("/unknown/url");
-        when(response.getWriter()).thenReturn(printWriter);
+    public void testDeleteTask() throws Exception {
+        String id = "1";
 
-        controller.doGet(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
-        verify(printWriter).write("Не найдена страница!");
-    }
-
-    @Test
-    public void testPostTaskSuccess() throws Exception {
-        TaskDTO taskToUpdate = new TaskDTO(0, "Обновление системы", "2024-12-30");
-        TaskDTO existingTask = new TaskDTO(1, "Обновление системы", "2024-10-30");
-
-        when(request.getRequestURI()).thenReturn("/task/1");
-        when(response.getWriter()).thenReturn(printWriter);
-
-        InputStream inputStream = new ByteArrayInputStream(new ObjectMapper().writeValueAsBytes(taskToUpdate));
-        DelegatingServletInputStream delegatingServletInputStream = new DelegatingServletInputStream(inputStream);
-
-        when(request.getInputStream()).thenReturn(delegatingServletInputStream);
-        when(taskService.findById(1)).thenReturn(existingTask);
-
-        controller.doPost(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_OK);
-        verify(printWriter).write("Данные обновлены успешно.");
-    }
-
-    @Test
-    public void testPostTaskNotFound() throws Exception {
-        when(request.getRequestURI()).thenReturn("/task/1");
-        when(response.getWriter()).thenReturn(printWriter);
-
-        TaskDTO task = new TaskDTO(1, "Обновление системы", "2024-10-30");
-        InputStream inputStream = new ByteArrayInputStream(new ObjectMapper().writeValueAsBytes(task));
-        DelegatingServletInputStream delegatingServletInputStream = new DelegatingServletInputStream(inputStream);
-
-        when(request.getInputStream()).thenReturn(delegatingServletInputStream);
-
-        Mockito.doThrow(new ObjectNotFoundException(1,""))
-                .when(taskService)
-                .update(any(TaskDTO.class));
-
-        controller.doPost(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
-        verify(printWriter).write("Нет записи с данным ID!");
-    }
-
-    @Test
-    public void testPutTaskSuccess() throws Exception {
-        when(request.getRequestURI()).thenReturn("/task/");
-        when(response.getWriter()).thenReturn(printWriter);
-
-        TaskDTO task = new TaskDTO(1, "Обновление системы", "2024-10-30");
-        InputStream inputStream = new ByteArrayInputStream(new ObjectMapper().writeValueAsBytes(task));
-        DelegatingServletInputStream delegatingServletInputStream = new DelegatingServletInputStream(inputStream);
-        when(request.getInputStream()).thenReturn(delegatingServletInputStream);
-
-        controller.doPut(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_CREATED);
-        verify(printWriter).write(any(String.class));
-    }
-
-    @Test
-    public void testDeleteTaskSuccess() throws Exception {
-        Integer taskId = 1;
-        when(request.getRequestURI()).thenReturn("/task/" + taskId);
-        when(response.getWriter()).thenReturn(printWriter);
-
-        controller.doDelete(request, response);
-
-        verify(response).setStatus(HttpServletResponse.SC_OK);
-        verify(taskService, times(1)).deleteById(taskId);
+        mockMvc.perform(delete("/task/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Запись успешно удалена."));
     }
 }

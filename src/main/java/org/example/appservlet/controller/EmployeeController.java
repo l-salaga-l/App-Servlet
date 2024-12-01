@@ -1,190 +1,56 @@
 package org.example.appservlet.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
-import org.example.appservlet.repository.impl.EmployeeRepositoryImpl;
+import lombok.RequiredArgsConstructor;
+import org.example.appservlet.dto.TaskDTO;
+import org.example.appservlet.dto.Response;
 import org.example.appservlet.service.EmployeeService;
-import org.example.appservlet.service.dto.EmployeeDTO;
-import org.example.appservlet.service.dto.TaskDTO;
-import org.example.appservlet.service.impl.EmployeeServiceImpl;
-import org.example.appservlet.util.ExtractNumber;
+import org.example.appservlet.dto.EmployeeDTO;
+import org.example.appservlet.util.TryParse;
 
-import org.hibernate.ObjectNotFoundException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
 
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.util.List;
 
-@WebServlet(urlPatterns = {"/employee/*"})
-public class EmployeeController extends HttpServlet {
-    private EmployeeService employeeService;
+@RestController
+@RequestMapping(value = "/employee", produces="application/json")
+@RequiredArgsConstructor(onConstructor = @__(@Autowired))
+public class EmployeeController {
+    private final EmployeeService employeeService;
 
-    @Override
-    public void init() {
-        employeeService = new EmployeeServiceImpl(new EmployeeRepositoryImpl());
+    @GetMapping(value = "/")
+    public ResponseEntity<List<EmployeeDTO>> getAllEmployees() {
+        return new ResponseEntity<>(employeeService.findAll(), HttpStatus.OK);
     }
 
-    @Override
-    public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String requestURI = req.getRequestURI();
-        String response;
-
-        try {
-            if (requestURI.equals("/employee/")) {
-                response = handleGetAllEmployees();
-                resp.setStatus(HttpServletResponse.SC_OK);
-            } else if (requestURI.matches("^/employee/[^/]+?$")) {
-                response = handleGetEmployeeById(req);
-                resp.setStatus(HttpServletResponse.SC_OK);
-            } else if (requestURI.matches("^/employee/[^/]+/tasks$")) {
-                response = handleGetTasks(req);
-                resp.setStatus(HttpServletResponse.SC_OK);
-            } else {
-                response = "Не найдена страница!";
-                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            }
-        } catch (NumberFormatException e) {
-            response = "Неправильный формат идентификатора!";
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        } catch (ObjectNotFoundException e) {
-            response = "Нет записи с данным ID!";
-            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-        } catch (JsonProcessingException e) {
-            response = "Ошибка в обработке запроса!" + e.getMessage();
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-
-        writeResponse(resp, response);
+    @GetMapping(value = "/{id}")
+    public ResponseEntity<EmployeeDTO> getEmployeeById(@PathVariable(value = "id") String id) {
+        return new ResponseEntity<>(employeeService.findById(id), HttpStatus.OK);
     }
 
-    @Override
-    public void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String requestURI = req.getRequestURI();
-        String response;
-
-        try {
-            if (requestURI.matches("^/employee/[^/]+$")) {
-                response = handlePostUpdate(req);
-                resp.setStatus(HttpServletResponse.SC_OK);
-            } else {
-                response = "Не найдена страница!";
-                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            }
-        } catch (NumberFormatException e) {
-            response = "Неправильный формат идентификатора!";
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        } catch (ObjectNotFoundException e) {
-            response = "Нет записи с данным ID!";
-            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-        } catch (IOException e) {
-            response = "Ошибка в доступе!";
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-
-        writeResponse(resp, response);
+    @GetMapping(value = "/{id}/tasks")
+    public ResponseEntity<List<TaskDTO>> getEmployeeTasks(@PathVariable(value = "id") String id) {
+        return new ResponseEntity<>(employeeService.findTasksByEmployeeId(id), HttpStatus.OK);
     }
 
-    @Override
-    public void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String requestURI = req.getRequestURI();
-        String response;
-
-        try {
-            if (requestURI.equals("/employee/")) {
-                response = handlePutNewEmployee(req);
-                resp.setStatus(HttpServletResponse.SC_CREATED);
-            } else {
-                response = "Не найдена страница!";
-                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            }
-        } catch (IOException e) {
-            response = "Ошибка в доступе!";
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-
-        writeResponse(resp, response);
+    @PostMapping(value = "/{id}")
+    public ResponseEntity<Response> updateEmployee(@PathVariable(value = "id") String id, @RequestBody EmployeeDTO employeeDTO) {
+        employeeDTO.setId(TryParse.Int(id));
+        employeeService.update(employeeDTO);
+        return new ResponseEntity<>(new Response("Данные успешно обновлены.", HttpStatus.OK), HttpStatus.OK);
     }
 
-    @Override
-    public void doDelete(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String requestURI = req.getRequestURI();
-        String response;
-
-        try {
-            if (requestURI.matches("^/employee/[^/]+$")) {
-                response = handleDelete(req);
-                resp.setStatus(HttpServletResponse.SC_OK);
-            } else {
-                response = "Не найдена страница!";
-                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            }
-        } catch (NumberFormatException e) {
-            response = "Неправильный формат идентификатора!";
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        } catch (ObjectNotFoundException e) {
-            response = "Нет записи с данным ID!";
-            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-        }
-
-        writeResponse(resp, response);
+    @PutMapping(value = "/")
+    public ResponseEntity<Response> createEmployee(@RequestBody EmployeeDTO employeeDTO) {
+        employeeService.save(employeeDTO);
+        return new ResponseEntity<>(new Response("Запись успешно сохранена.", HttpStatus.CREATED), HttpStatus.CREATED);
     }
 
-    private String handleGetAllEmployees() throws JsonProcessingException {
-        Iterable<EmployeeDTO> employees = employeeService.findAll();
-
-        return new ObjectMapper().writeValueAsString(employees);
-    }
-
-    private String handleGetEmployeeById(HttpServletRequest req) throws ObjectNotFoundException, JsonProcessingException {
-        Integer employeeId = ExtractNumber.apply(req.getRequestURI());
-        EmployeeDTO employee = employeeService.findById(employeeId);
-
-        return new ObjectMapper().writeValueAsString(employee);
-    }
-
-    private String handleGetTasks(HttpServletRequest req) throws ObjectNotFoundException, JsonProcessingException {
-        Integer employeeId = ExtractNumber.apply(req.getRequestURI());
-        Iterable<TaskDTO> tasks = employeeService.findTasksByEmployeeId(employeeId);
-
-        return new ObjectMapper().writeValueAsString(tasks);
-    }
-
-    private String handlePostUpdate(HttpServletRequest req) throws ObjectNotFoundException, IOException {
-        Integer employeeId = ExtractNumber.apply(req.getRequestURI());
-
-        EmployeeDTO employee_new = new ObjectMapper().readValue(req.getInputStream(), EmployeeDTO.class);
-        employee_new.setId(employeeId);
-
-        employeeService.update(employee_new);
-
-        return "Данные обновлены успешно.";
-    }
-
-    private String handlePutNewEmployee(HttpServletRequest req) throws IOException {
-        EmployeeDTO employee = new ObjectMapper().readValue(req.getInputStream(), EmployeeDTO.class);
-        employee = employeeService.save(employee);
-
-        return "Данные успешно сохранены.\n" + new ObjectMapper().writeValueAsString(employee);
-    }
-
-    private String handleDelete(HttpServletRequest req) throws NumberFormatException, ObjectNotFoundException {
-        Integer employeeId = ExtractNumber.apply(req.getRequestURI());
-        employeeService.deleteById(employeeId);
-
-        return "Запись удалена успешно.";
-    }
-
-    private void writeResponse(HttpServletResponse resp, String response) throws IOException {
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("Windows-1251");
-
-        PrintWriter printWriter = resp.getWriter();
-        printWriter.write(response);
-        printWriter.flush();
+    @DeleteMapping(value = "/{id}")
+    public ResponseEntity<Response> deleteEmployee(@PathVariable(value = "id") String id) {
+        employeeService.deleteById(id);
+        return new ResponseEntity<>(new Response("Запись успешно удалена.", HttpStatus.OK), HttpStatus.OK);
     }
 }

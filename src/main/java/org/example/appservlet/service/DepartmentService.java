@@ -1,9 +1,10 @@
 package org.example.appservlet.service;
 
-import org.example.appservlet.service.dto.DepartmentDTO;
-import org.example.appservlet.service.dto.EmployeeDTO;
-import org.hibernate.ObjectNotFoundException;
+import org.example.appservlet.dto.DepartmentDTO;
+import org.example.appservlet.dto.EmployeeDTO;
+
+import java.util.List;
 
 public interface DepartmentService extends Service<DepartmentDTO> {
-    Iterable<EmployeeDTO> findEmployeeByDepartmentId(Integer departmentId) throws ObjectNotFoundException;
+    List<EmployeeDTO> findEmployeeByDepartmentId(String id);
 }
