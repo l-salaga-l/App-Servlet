@@ -1,7 +1,5 @@
 package org.example.appservlet.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import jakarta.persistence.*;
 
 import lombok.AllArgsConstructor;
@@ -25,8 +23,9 @@ import java.util.Set;
 @Entity
 public class Task {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     @Column(name = "id")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "task_id_seq")
+    @SequenceGenerator(name = "task_id_seq", sequenceName = "task_id_seq", allocationSize = 1)
     private Integer id;
 
     @Column(name = "task_name")
@@ -35,18 +34,9 @@ public class Task {
     @Column(name = "deadline")
     private String deadline;
 
-    @JsonIgnore
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "assignments",
             joinColumns = @JoinColumn(name = "task_id"),
             inverseJoinColumns = @JoinColumn(name = "employee_id"))
     private Set<Employee> employees = new HashSet<>(0);
-
-    public void addEmployee(Employee employee) {
-        this.employees.add(employee);
-    }
-
-    public void removeEmployee(Employee employee) {
-        this.employees.remove(employee);
-    }
 }

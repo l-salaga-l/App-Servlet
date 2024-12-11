@@ -1,62 +1,89 @@
 package org.example.appservlet.service.impl;
 
+import org.example.appservlet.exception.DepartmentNotFoundException;
 import org.example.appservlet.model.Department;
-import org.example.appservlet.model.Employee;
 import org.example.appservlet.repository.DepartmentRepository;
 import org.example.appservlet.service.DepartmentService;
-import org.example.appservlet.service.dto.DepartmentDTO;
-import org.example.appservlet.service.dto.EmployeeDTO;
-import org.example.appservlet.service.mapper.DepartmentMapper;
-import org.example.appservlet.service.mapper.EmployeeMapper;
+import org.example.appservlet.dto.DepartmentDTO;
+import org.example.appservlet.dto.EmployeeDTO;
+import org.example.appservlet.mapper.DepartmentMapper;
+import org.example.appservlet.mapper.EmployeeMapper;
 
+import org.example.appservlet.util.TryParse;
 import org.hibernate.ObjectNotFoundException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
+import java.util.List;
+
+@Service
 public class DepartmentServiceImpl implements DepartmentService {
     private final DepartmentRepository departmentRepository;
 
+    @Autowired
     public DepartmentServiceImpl(DepartmentRepository departmentRepository) {
         this.departmentRepository = departmentRepository;
     }
 
     @Override
-    public DepartmentDTO save(DepartmentDTO departmentDTO) {
+    @Transactional
+    public void save(DepartmentDTO departmentDTO) {
         Department department = DepartmentMapper.toEntity(departmentDTO);
-        Department savedDepartment = departmentRepository.save(department);
-        return DepartmentMapper.toDto(savedDepartment);
+        departmentRepository.save(department);
     }
 
     @Override
-    public Iterable<DepartmentDTO> findAll() {
-        Iterable<Department> departments = departmentRepository.findAll();
-        return DepartmentMapper.toDto(departments);
+    public List<DepartmentDTO> findAll() {
+        return departmentRepository.findAll().stream()
+                .map(DepartmentMapper::toDto)
+                .sorted(Comparator.comparing(DepartmentDTO::getId))
+                .toList();
     }
 
     @Override
-    public DepartmentDTO findById(Integer id) throws ObjectNotFoundException {
-        Department department = departmentRepository.findById(id).orElseThrow();
-        return DepartmentMapper.toDto(department);
+    public DepartmentDTO findById(String id) {
+        Integer departmentId = TryParse.Int(id);
+        return departmentRepository.findById(departmentId)
+                .map(DepartmentMapper::toDto)
+                .orElseThrow(DepartmentNotFoundException::new);
     }
 
     @Override
+    @Transactional
     public void update(DepartmentDTO departmentDTO) throws ObjectNotFoundException {
         Department departmentNew = DepartmentMapper.toEntity(departmentDTO);
         Department departmentUpdated = fillNullFields(departmentNew);
-        departmentRepository.save(departmentUpdated);
+        departmentRepository.update(departmentUpdated);
     }
 
     @Override
-    public void deleteById(Integer id) throws ObjectNotFoundException {
-        departmentRepository.deleteById(id);
+    @Transactional
+    public void deleteById(String id) {
+        Integer departmentId = TryParse.Int(id);
+        if (!departmentRepository.existsById(departmentId)) {
+            throw new DepartmentNotFoundException();
+        } else {
+            departmentRepository.deleteById(departmentId);
+        }
     }
 
     @Override
-    public Iterable<EmployeeDTO> findEmployeeByDepartmentId(Integer departmentId) throws ObjectNotFoundException {
-        Iterable<Employee> employees = departmentRepository.findEmployeesByDepartmentId(departmentId);
-        return EmployeeMapper.toDto(employees);
+    public List<EmployeeDTO> findEmployeeByDepartmentId(String id) {
+        Integer departmentId = TryParse.Int(id);
+        if (!departmentRepository.existsById(departmentId)) {
+            throw new DepartmentNotFoundException();
+        } else {
+            return departmentRepository.findEmployeesByDepartmentId(departmentId).stream()
+                    .map(EmployeeMapper::toDto)
+                    .sorted(Comparator.comparing(EmployeeDTO::getId))
+                    .toList();
+        }
     }
 
-    private Department fillNullFields(Department department_new) throws ObjectNotFoundException {
-        Department department_old = departmentRepository.findById(department_new.getId()).orElseThrow();
+    private Department fillNullFields(Department department_new) {
+        Department department_old = departmentRepository.findById(department_new.getId()).orElseThrow(DepartmentNotFoundException::new);
 
         if (department_new.getDepartmentName() == null) {
             department_new.setDepartmentName(department_old.getDepartmentName());

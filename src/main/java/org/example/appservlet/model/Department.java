@@ -1,7 +1,5 @@
 package org.example.appservlet.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import jakarta.persistence.*;
 
 import lombok.AllArgsConstructor;
@@ -26,8 +24,9 @@ import java.util.Set;
 public class Department {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     @Column(name = "id")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "department_id_seq")
+    @SequenceGenerator(name = "department_id_seq", sequenceName = "department_id_seq", allocationSize = 1)
     private Integer id;
 
     @Column(name = "department_name")
@@ -37,14 +36,5 @@ public class Department {
     private String location;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "department", cascade = CascadeType.ALL)
-    @JsonIgnore
     private Set<Employee> employees = new HashSet<>(0);
-
-    public boolean addEmployee(Employee employee) {
-        return employees.add(employee);
-    }
-
-    public boolean removeEmployee(Employee employee) {
-        return employees.remove(employee);
-    }
 }

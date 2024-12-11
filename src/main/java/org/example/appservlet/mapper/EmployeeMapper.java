@@ -1,10 +1,7 @@
-package org.example.appservlet.service.mapper;
+package org.example.appservlet.mapper;
 
 import org.example.appservlet.model.Employee;
-import org.example.appservlet.service.dto.EmployeeDTO;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.example.appservlet.dto.EmployeeDTO;
 
 public class EmployeeMapper {
 
@@ -19,19 +16,6 @@ public class EmployeeMapper {
         dto.setEmail(employee.getEmail());
         dto.setAge(employee.getAge());
         return dto;
-    }
-
-    public static Iterable<EmployeeDTO> toDto(Iterable<Employee> employees) {
-        if (employees == null) {
-            return null;
-        }
-        List<EmployeeDTO> employeeDTOS = new ArrayList<>();
-
-        for (Employee employee : employees) {
-            employeeDTOS.add(toDto(employee));
-        }
-
-        return employeeDTOS;
     }
 
     public static Employee toEntity(EmployeeDTO dto) {
