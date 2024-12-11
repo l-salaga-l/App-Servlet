@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.example.appservlet.controller.DepartmentController;
 import org.example.appservlet.controller.advice.ControllerAdvice;
-import org.example.appservlet.dto.DepartmentDTO;
-import org.example.appservlet.dto.EmployeeDTO;
+import org.example.appservlet.dto.response.DepartmentResponseDto;
+import org.example.appservlet.dto.response.EmployeeResponseDto;
 import org.example.appservlet.service.DepartmentService;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -51,8 +51,8 @@ public class DepartmentControllerTest {
 
     @Test
     public void testGetAllDepartments() throws Exception {
-        DepartmentDTO department1 = new DepartmentDTO();
-        DepartmentDTO department2 = new DepartmentDTO();
+        DepartmentResponseDto department1 = new DepartmentResponseDto();
+        DepartmentResponseDto department2 = new DepartmentResponseDto();
         when(departmentService.findAll()).thenReturn(Arrays.asList(department1, department2));
 
         mockMvc.perform(get("/department/")
@@ -64,7 +64,7 @@ public class DepartmentControllerTest {
     @Test
     public void testGetDepartmentById() throws Exception {
         String id = "1";
-        DepartmentDTO departmentDTO = new DepartmentDTO();
+        DepartmentResponseDto departmentDTO = new DepartmentResponseDto();
         when(departmentService.findById(id)).thenReturn(departmentDTO);
 
         mockMvc.perform(get("/department/{id}", id)
@@ -76,7 +76,7 @@ public class DepartmentControllerTest {
     @Test
     public void testGetEmployeesByDepartment() throws Exception {
         String id = "1";
-        List<EmployeeDTO> employees = Arrays.asList(new EmployeeDTO(), new EmployeeDTO());
+        List<EmployeeResponseDto> employees = Arrays.asList(new EmployeeResponseDto(), new EmployeeResponseDto());
         when(departmentService.findEmployeeByDepartmentId(id)).thenReturn(employees);
 
         mockMvc.perform(get("/department/{id}/employees", id)
@@ -88,7 +88,7 @@ public class DepartmentControllerTest {
     @Test
     public void testUpdateDepartment() throws Exception {
         String id = "1";
-        DepartmentDTO departmentDTO = new DepartmentDTO();
+        DepartmentResponseDto departmentDTO = new DepartmentResponseDto();
         String jsonContent = objectMapper.writeValueAsString(departmentDTO);
 
         mockMvc.perform(post("/department/{id}", id)
@@ -100,7 +100,7 @@ public class DepartmentControllerTest {
 
     @Test
     public void testCreateDepartment() throws Exception {
-        DepartmentDTO departmentDTO = new DepartmentDTO();
+        DepartmentResponseDto departmentDTO = new DepartmentResponseDto();
         String jsonContent = objectMapper.writeValueAsString(departmentDTO);
 
         mockMvc.perform(put("/department/")

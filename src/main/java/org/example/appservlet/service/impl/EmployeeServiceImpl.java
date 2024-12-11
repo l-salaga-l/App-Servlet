@@ -1,88 +1,99 @@
 package org.example.appservlet.service.impl;
 
+import lombok.RequiredArgsConstructor;
+import org.example.appservlet.dto.request.EmployeeRequestDto;
+import org.example.appservlet.dto.response.EmployeeResponseDto;
+import org.example.appservlet.dto.response.Response;
+import org.example.appservlet.dto.response.TaskResponseDto;
+import org.example.appservlet.exception.DepartmentNotFoundException;
 import org.example.appservlet.exception.EmployeeNotFoundException;
-import org.example.appservlet.model.Employee;
-import org.example.appservlet.repository.EmployeeRepository;
-import org.example.appservlet.service.EmployeeService;
-import org.example.appservlet.dto.EmployeeDTO;
-import org.example.appservlet.dto.TaskDTO;
 import org.example.appservlet.mapper.EmployeeMapper;
 import org.example.appservlet.mapper.TaskMapper;
-
+import org.example.appservlet.model.Department;
+import org.example.appservlet.model.Employee;
+import org.example.appservlet.repository.DepartmentRepository;
+import org.example.appservlet.repository.EmployeeRepository;
+import org.example.appservlet.service.EmployeeService;
 import org.example.appservlet.util.TryParse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.Comparator;
 import java.util.List;
 
-@Service
-public class EmployeeServiceImpl implements EmployeeService {
-    private final EmployeeRepository repository;
+import static org.example.appservlet.util.MessageHelper.SUCCESS_DELETE_MESSAGE;
+import static org.example.appservlet.util.MessageHelper.SUCCESS_UPDATE_MESSAGE;
 
-    @Autowired
-    public EmployeeServiceImpl(EmployeeRepository repository) {
-        this.repository = repository;
-    }
+@Service
+@RequiredArgsConstructor
+public class EmployeeServiceImpl implements EmployeeService {
+    private final EmployeeRepository employeeRepository;
+    private final DepartmentRepository departmentRepository;
+    private final EmployeeMapper employeeMapper;
+    private final TaskMapper taskMapper;
 
     @Override
     @Transactional
-    public void save(EmployeeDTO employeeDTO) {
-        Employee employee = EmployeeMapper.toEntity(employeeDTO);
-        repository.save(employee);
+    public EmployeeResponseDto save(EmployeeRequestDto employeeRequestDto) {
+        Employee employee = createEmployee(employeeRequestDto);
+        employee = employeeRepository.save(employee);
+
+        return employeeMapper.toEmployeeResponseDto(employee);
     }
 
     @Override
-    public List<EmployeeDTO> findAll() {
-        return repository.findAll().stream()
-                .map(EmployeeMapper::toDto)
-                .sorted(Comparator.comparing(EmployeeDTO::getId))
+    public List<EmployeeResponseDto> findAll() {
+        return employeeRepository.findAll().stream()
+                .map(employeeMapper::toEmployeeResponseDto)
+                .sorted(Comparator.comparing(EmployeeResponseDto::getId))
                 .toList();
     }
 
     @Override
-    public EmployeeDTO findById(String id) {
+    public EmployeeResponseDto findById(String id) {
         Integer employeeId = TryParse.Int(id);
-        return repository.findById(employeeId)
-                .map(EmployeeMapper::toDto)
+        return employeeRepository.findById(employeeId)
+                .map(employeeMapper::toEmployeeResponseDto)
                 .orElseThrow(EmployeeNotFoundException::new);
     }
 
     @Override
     @Transactional
-    public void update(EmployeeDTO employeeDTO) {
-        Employee employeeNew = EmployeeMapper.toEntity(employeeDTO);
+    public Response update(String id, EmployeeRequestDto employeeRequestDto) {
+        Employee employeeNew = createEmployee(employeeRequestDto);
+        employeeNew.setId(TryParse.Int(id));
+
         Employee employeeUpdated = fillNullFields(employeeNew);
-        repository.update(employeeUpdated);
+        employeeRepository.update(employeeUpdated);
+        return new Response(SUCCESS_UPDATE_MESSAGE);
     }
 
     @Override
     @Transactional
-    public void deleteById(String id) {
+    public Response deleteById(String id) {
         Integer employeeId = TryParse.Int(id);
-        if (!repository.existsById(employeeId)) {
+        if (!employeeRepository.existsById(employeeId)) {
             throw new EmployeeNotFoundException();
-        } else {
-            repository.deleteById(employeeId);
         }
+        employeeRepository.deleteById(employeeId);
+
+        return new Response(SUCCESS_DELETE_MESSAGE);
     }
 
     @Override
-    public List<TaskDTO> findTasksByEmployeeId(String id) {
+    public List<TaskResponseDto> findTasksByEmployeeId(String id) {
         Integer employeeId = TryParse.Int(id);
-        if (!repository.existsById(employeeId)) {
+        if (!employeeRepository.existsById(employeeId)) {
             throw new EmployeeNotFoundException();
-        } else {
-            return repository.findTasksByEmployeeId(employeeId).stream()
-                    .map(TaskMapper::toDto)
-                    .sorted(Comparator.comparing(TaskDTO::getId))
-                    .toList();
         }
+
+        return employeeRepository.findTasksByEmployeeId(employeeId).stream()
+                .map(taskMapper::toTaskResponseDto)
+                .sorted(Comparator.comparing(TaskResponseDto::getId))
+                .toList();
     }
 
     private Employee fillNullFields(Employee employee_new) {
-        Employee employee_old = repository.findById(employee_new.getId())
+        Employee employee_old = employeeRepository.findById(employee_new.getId())
                 .orElseThrow(EmployeeNotFoundException::new);
 
         if (employee_new.getFirstname() == null) {
@@ -99,5 +110,18 @@ public class EmployeeServiceImpl implements EmployeeService {
         }
 
         return employee_new;
+    }
+
+    private Employee createEmployee(EmployeeRequestDto employeeRequestDto) {
+        Department department = departmentRepository.findById(employeeRequestDto.getDepartmentId()).
+                orElseThrow(DepartmentNotFoundException::new);
+
+        return Employee.builder()
+                .firstname(employeeRequestDto.getFirstname())
+                .lastname(employeeRequestDto.getLastname())
+                .email(employeeRequestDto.getEmail())
+                .age(employeeRequestDto.getAge())
+                .department(department)
+                .build();
     }
 }

@@ -1,8 +1,7 @@
 package org.example.appservlet.controller.advice;
 
 import org.example.appservlet.exception.BadRequestException;
-import org.example.appservlet.dto.Response;
-
+import org.example.appservlet.dto.response.Response;
 import org.example.appservlet.exception.DepartmentNotFoundException;
 import org.example.appservlet.exception.EmployeeNotFoundException;
 import org.example.appservlet.exception.TaskNotFoundException;
@@ -17,18 +16,16 @@ public class ControllerAdvice {
 
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<Response> handleBadRequest(Exception e) {
-        Response errorResponse = new Response(e.getMessage(), HttpStatus.BAD_REQUEST);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(errorResponse);
+                .body(new Response(e.getMessage()));
     }
 
     @ExceptionHandler({DepartmentNotFoundException.class, EmployeeNotFoundException.class,
             TaskNotFoundException.class})
     public ResponseEntity<Response> handleNotFoundException(DepartmentNotFoundException e) {
-        Response errorResponse = new Response(e.getMessage(), HttpStatus.NOT_FOUND);
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(errorResponse);
+                .body(new Response(e.getMessage()));
     }
 }
