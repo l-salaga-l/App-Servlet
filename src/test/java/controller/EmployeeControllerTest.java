@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.example.appservlet.controller.EmployeeController;
 import org.example.appservlet.controller.advice.ControllerAdvice;
-import org.example.appservlet.dto.EmployeeDTO;
-import org.example.appservlet.dto.TaskDTO;
+import org.example.appservlet.dto.response.EmployeeResponseDto;
+import org.example.appservlet.dto.response.TaskResponseDto;
 import org.example.appservlet.service.EmployeeService;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -51,8 +51,8 @@ public class EmployeeControllerTest {
 
     @Test
     public void testGetAllEmployees() throws Exception {
-        EmployeeDTO employee1 = new EmployeeDTO();
-        EmployeeDTO employee2 = new EmployeeDTO();
+        EmployeeResponseDto employee1 = new EmployeeResponseDto();
+        EmployeeResponseDto employee2 = new EmployeeResponseDto();
         when(employeeService.findAll()).thenReturn(Arrays.asList(employee1, employee2));
 
         mockMvc.perform(get("/employee/")
@@ -64,7 +64,7 @@ public class EmployeeControllerTest {
     @Test
     public void testGetEmployeeById() throws Exception {
         String id = "1";
-        EmployeeDTO employeeDTO = new EmployeeDTO();
+        EmployeeResponseDto employeeDTO = new EmployeeResponseDto();
         when(employeeService.findById(id)).thenReturn(employeeDTO);
 
         mockMvc.perform(get("/employee/{id}", id)
@@ -76,7 +76,7 @@ public class EmployeeControllerTest {
     @Test
     public void testGetEmployeeTasks() throws Exception {
         String id = "1";
-        List<TaskDTO> tasks = Arrays.asList(new TaskDTO(), new TaskDTO());
+        List<TaskResponseDto> tasks = Arrays.asList(new TaskResponseDto(), new TaskResponseDto());
         when(employeeService.findTasksByEmployeeId(id)).thenReturn(tasks);
 
         mockMvc.perform(get("/employee/{id}/tasks", id)
@@ -88,7 +88,7 @@ public class EmployeeControllerTest {
     @Test
     public void testUpdateEmployee() throws Exception {
         String id = "1";
-        EmployeeDTO employeeDTO = new EmployeeDTO();
+        EmployeeResponseDto employeeDTO = new EmployeeResponseDto();
         String jsonContent = objectMapper.writeValueAsString(employeeDTO);
 
         mockMvc.perform(post("/employee/{id}", id)
@@ -100,7 +100,7 @@ public class EmployeeControllerTest {
 
     @Test
     public void testCreateEmployee() throws Exception {
-        EmployeeDTO employeeDTO = new EmployeeDTO();
+        EmployeeResponseDto employeeDTO = new EmployeeResponseDto();
         String jsonContent = objectMapper.writeValueAsString(employeeDTO);
 
         mockMvc.perform(put("/employee/")

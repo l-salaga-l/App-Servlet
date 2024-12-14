@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - include:
+      file: department.sql
+      relativeToChangelogFile: true
+  - include:
+      file: task.sql
+      relativeToChangelogFile: true
+  - include:
+      file: employee.sql
+      relativeToChangelogFile: true
+  - include:
+      file: assignments.sql
+      relativeToChangelogFile: true
+  - changeSet:
+      id: 01.000.00
+      author: Damir Nurlygayanov
+      logicalFilePath: 01.000.00/db.changelog.yaml
+      changes:
+        - tagDatabase:
+            tag: 01.000.00

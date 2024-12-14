@@ -1,35 +1,17 @@
 package org.example.appservlet.mapper;
 
+import org.example.appservlet.dto.response.EmployeeResponseDto;
 import org.example.appservlet.model.Employee;
-import org.example.appservlet.dto.EmployeeDTO;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-public class EmployeeMapper {
+@Mapper(componentModel = "spring")
+public interface EmployeeMapper {
 
-    public static EmployeeDTO toDto(Employee employee) {
-        if (employee == null) {
-            return null;
-        }
-        EmployeeDTO dto = new EmployeeDTO();
-        dto.setId(employee.getId());
-        dto.setFirstname(employee.getFirstname());
-        dto.setLastname(employee.getLastname());
-        dto.setEmail(employee.getEmail());
-        dto.setAge(employee.getAge());
-        return dto;
-    }
-
-    public static Employee toEntity(EmployeeDTO dto) {
-        if (dto == null) {
-            return null;
-        }
-        Employee employee = new Employee();
-        employee.setId(dto.getId());
-        employee.setFirstname(dto.getFirstname());
-        employee.setLastname(dto.getLastname());
-        employee.setEmail(dto.getEmail());
-        employee.setAge(dto.getAge());
-        employee.setDepartment(null);
-        employee.setTasks(null);
-        return employee;
-    }
+    @Mapping(source = "id", target = "id")
+    @Mapping(source = "firstname", target = "firstname")
+    @Mapping(source = "lastname", target = "lastname")
+    @Mapping(source = "email", target = "email")
+    @Mapping(source = "age", target = "age")
+    EmployeeResponseDto toEmployeeResponseDto(Employee employee);
 }

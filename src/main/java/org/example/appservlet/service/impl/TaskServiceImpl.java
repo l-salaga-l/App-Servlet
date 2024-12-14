@@ -1,84 +1,90 @@
 package org.example.appservlet.service.impl;
 
+import lombok.RequiredArgsConstructor;
+import org.example.appservlet.dto.request.TaskRequestDto;
+import org.example.appservlet.dto.response.EmployeeResponseDto;
+import org.example.appservlet.dto.response.Response;
+import org.example.appservlet.dto.response.TaskResponseDto;
 import org.example.appservlet.exception.TaskNotFoundException;
+import org.example.appservlet.mapper.EmployeeMapper;
+import org.example.appservlet.mapper.TaskMapper;
 import org.example.appservlet.model.Task;
 import org.example.appservlet.repository.TaskRepository;
 import org.example.appservlet.service.TaskService;
-import org.example.appservlet.dto.EmployeeDTO;
-import org.example.appservlet.dto.TaskDTO;
-import org.example.appservlet.mapper.EmployeeMapper;
-import org.example.appservlet.mapper.TaskMapper;
 import org.example.appservlet.util.TryParse;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.Comparator;
 import java.util.List;
 
+import static org.example.appservlet.util.MessageHelper.SUCCESS_DELETE_MESSAGE;
+import static org.example.appservlet.util.MessageHelper.SUCCESS_UPDATE_MESSAGE;
+
 @Service
+@RequiredArgsConstructor
 public class TaskServiceImpl implements TaskService {
     private final TaskRepository taskRepository;
-
-    @Autowired
-    public TaskServiceImpl(TaskRepository taskRepository) {
-        this.taskRepository = taskRepository;
-    }
+    private final TaskMapper taskMapper;
+    private final EmployeeMapper employeeMapper;
 
     @Override
     @Transactional
-    public void save(TaskDTO taskDTO) {
-        Task task = TaskMapper.toEntity(taskDTO);
-        taskRepository.save(task);
+    public TaskResponseDto save(TaskRequestDto taskRequestDto) {
+        Task task = createTask(taskRequestDto);
+        task = taskRepository.save(task);
+
+        return taskMapper.toTaskResponseDto(task);
     }
 
     @Override
-    public List<TaskDTO> findAll() {
+    public List<TaskResponseDto> findAll() {
         return taskRepository.findAll().stream()
-                .map(TaskMapper::toDto)
-                .sorted(Comparator.comparing(TaskDTO::getId))
+                .map(taskMapper::toTaskResponseDto)
+                .sorted(Comparator.comparing(TaskResponseDto::getId))
                 .toList();
     }
 
     @Override
-    public TaskDTO findById(String id) {
+    public TaskResponseDto findById(String id) {
         Integer taskId = TryParse.Int(id);
         return taskRepository.findById(taskId)
-                .map(TaskMapper::toDto)
+                .map(taskMapper::toTaskResponseDto)
                 .orElseThrow(TaskNotFoundException::new);
     }
 
     @Override
     @Transactional
-    public void update(TaskDTO taskDTO) {
-        Task task = TaskMapper.toEntity(taskDTO);
+    public Response update(String id, TaskRequestDto taskRequestDto) {
+        Task task = createTask(taskRequestDto);
+        task.setId(TryParse.Int(id));
+
         Task taskUpdated = fillNullFields(task);
         taskRepository.update(taskUpdated);
+        return new Response(SUCCESS_UPDATE_MESSAGE);
     }
 
     @Override
     @Transactional
-    public void deleteById(String id) {
+    public Response deleteById(String id) {
         Integer taskId = TryParse.Int(id);
         if (!taskRepository.existsById(taskId)) {
             throw new TaskNotFoundException();
-        } else {
-            taskRepository.deleteById(taskId);
         }
+        taskRepository.deleteById(taskId);
+        return new Response(SUCCESS_DELETE_MESSAGE);
     }
 
     @Override
-    public List<EmployeeDTO> findEmployeesByTaskId(String id) {
+    public List<EmployeeResponseDto> findEmployeesByTaskId(String id) {
         Integer taskId = TryParse.Int(id);
         if (!taskRepository.existsById(taskId)) {
             throw new TaskNotFoundException();
-        } else {
-            return taskRepository.findEmployeesByTaskId(taskId).stream()
-                    .map(EmployeeMapper::toDto)
-                    .sorted(Comparator.comparing(EmployeeDTO::getId))
-                    .toList();
         }
+
+        return taskRepository.findEmployeesByTaskId(taskId).stream()
+                .map(employeeMapper::toEmployeeResponseDto)
+                .sorted(Comparator.comparing(EmployeeResponseDto::getId))
+                .toList();
     }
 
     private Task fillNullFields(Task task_new) {
@@ -95,5 +101,12 @@ public class TaskServiceImpl implements TaskService {
         }
 
         return task_new;
+    }
+
+    private Task createTask(TaskRequestDto taskRequestDto) {
+        return Task.builder()
+                .taskName(taskRequestDto.getTaskName())
+                .deadline(taskRequestDto.getDeadline())
+                .build();
     }
 }

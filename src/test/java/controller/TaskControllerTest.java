@@ -4,8 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.example.appservlet.controller.TaskController;
 import org.example.appservlet.controller.advice.ControllerAdvice;
-import org.example.appservlet.dto.EmployeeDTO;
-import org.example.appservlet.dto.TaskDTO;
+import org.example.appservlet.dto.request.TaskRequestDto;
+import org.example.appservlet.dto.response.EmployeeResponseDto;
+import org.example.appservlet.dto.response.TaskResponseDto;
 import org.example.appservlet.service.TaskService;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -51,8 +52,8 @@ public class TaskControllerTest {
 
     @Test
     public void testGetAllTasks() throws Exception {
-        TaskDTO task1 = new TaskDTO();
-        TaskDTO task2 = new TaskDTO();
+        TaskResponseDto task1 = new TaskResponseDto();
+        TaskResponseDto task2 = new TaskResponseDto();
         when(taskService.findAll()).thenReturn(Arrays.asList(task1, task2));
 
         mockMvc.perform(get("/task/")
@@ -64,8 +65,8 @@ public class TaskControllerTest {
     @Test
     public void testGetTaskById() throws Exception {
         String id = "1";
-        TaskDTO taskDTO = new TaskDTO();
-        when(taskService.findById(id)).thenReturn(taskDTO);
+        TaskResponseDto task = new TaskResponseDto();
+        when(taskService.findById(id)).thenReturn(task);
 
         mockMvc.perform(get("/task/{id}", id)
                         .accept(MediaType.APPLICATION_JSON))
@@ -76,7 +77,7 @@ public class TaskControllerTest {
     @Test
     public void testGetEmployeesByTask() throws Exception {
         String id = "1";
-        List<EmployeeDTO> employees = Arrays.asList(new EmployeeDTO(), new EmployeeDTO());
+        List<EmployeeResponseDto> employees = Arrays.asList(new EmployeeResponseDto(), new EmployeeResponseDto());
         when(taskService.findEmployeesByTaskId(id)).thenReturn(employees);
 
         mockMvc.perform(get("/task/{id}/employees", id)
@@ -88,7 +89,7 @@ public class TaskControllerTest {
     @Test
     public void testUpdateTask() throws Exception {
         String id = "1";
-        TaskDTO taskDTO = new TaskDTO();
+        TaskResponseDto taskDTO = new TaskResponseDto();
         String jsonContent = objectMapper.writeValueAsString(taskDTO);
 
         mockMvc.perform(post("/task/{id}", id)
@@ -100,7 +101,7 @@ public class TaskControllerTest {
 
     @Test
     public void testCreateTask() throws Exception {
-        TaskDTO taskDTO = new TaskDTO();
+        TaskResponseDto taskDTO = new TaskResponseDto();
         String jsonContent = objectMapper.writeValueAsString(taskDTO);
 
         mockMvc.perform(put("/task/")

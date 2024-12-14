@@ -1,16 +1,15 @@
-package org.example.appservlet.dto;
+package org.example.appservlet.dto.request;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Setter
-@Getter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DepartmentDTO {
-    private Integer id;
+public class DepartmentRequestDto {
     private String departmentName;
     private String location;
 }

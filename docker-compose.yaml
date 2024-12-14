@@ -1,0 +1,42 @@
+services:
+  app-servlet:
+    build:
+      context: .
+    image: 'app_servlet'
+    container_name: app_servlet
+    ports:
+      - "9015:9015"
+    restart: always
+
+    depends_on:
+      - database
+
+  database:
+    image: 'postgres:13.8-alpine'
+    container_name: database
+    ports:
+      - "5438:5432"
+    environment:
+      POSTGRES_DB: homework
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: dbpassword
+
+    volumes:
+      - .:/docker-entrypoint-initdb.d
+      - database:/var/lib/postgresql/data
+
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "pg-isready U database" ]
+      start_period: 15s
+      timeout: 3s
+      interval: 10s
+      retries: 12
+
+volumes:
+  database:
+
+networks:
+  app-servlet:
+    name: app-servlet
+    external: true

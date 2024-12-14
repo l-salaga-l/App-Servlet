@@ -1,0 +1,22 @@
+USER_DB: dbuser
+PASSWORD_DB: dbpassword
+
+server:
+  port: 9015
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${SERVER_IP:localhost}:5438/homework
+    driver-class-name: org.postgresql.Driver
+    username: ${USER_DB}
+    password: ${PASSWORD_DB}
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+
+  liquibase:
+    enabled: true
+    change-log: /db/changelog/db.changelog-master.yaml

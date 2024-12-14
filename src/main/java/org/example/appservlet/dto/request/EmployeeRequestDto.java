@@ -1,18 +1,18 @@
-package org.example.appservlet.dto;
+package org.example.appservlet.dto.request;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Setter
-@Getter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EmployeeDTO {
-    private Integer id;
+public class EmployeeRequestDto {
     private String firstname;
     private String lastname;
     private String email;
     private int age;
+    private int departmentId;
 }
