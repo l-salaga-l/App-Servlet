@@ -1,85 +1,89 @@
 package org.example.appservlet.service.impl;
 
+import lombok.RequiredArgsConstructor;
+import org.example.appservlet.dto.request.DepartmentRequestDto;
+import org.example.appservlet.dto.response.DepartmentResponseDto;
+import org.example.appservlet.dto.response.EmployeeResponseDto;
+import org.example.appservlet.dto.response.Response;
 import org.example.appservlet.exception.DepartmentNotFoundException;
+import org.example.appservlet.mapper.DepartmentMapper;
+import org.example.appservlet.mapper.EmployeeMapper;
 import org.example.appservlet.model.Department;
 import org.example.appservlet.repository.DepartmentRepository;
 import org.example.appservlet.service.DepartmentService;
-import org.example.appservlet.dto.DepartmentDTO;
-import org.example.appservlet.dto.EmployeeDTO;
-import org.example.appservlet.mapper.DepartmentMapper;
-import org.example.appservlet.mapper.EmployeeMapper;
-
 import org.example.appservlet.util.TryParse;
-import org.hibernate.ObjectNotFoundException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.Comparator;
 import java.util.List;
 
+import static org.example.appservlet.util.MessageHelper.SUCCESS_DELETE_MESSAGE;
+import static org.example.appservlet.util.MessageHelper.SUCCESS_UPDATE_MESSAGE;
+
 @Service
+@RequiredArgsConstructor
 public class DepartmentServiceImpl implements DepartmentService {
     private final DepartmentRepository departmentRepository;
-
-    @Autowired
-    public DepartmentServiceImpl(DepartmentRepository departmentRepository) {
-        this.departmentRepository = departmentRepository;
-    }
+    private final DepartmentMapper departmentMapper;
+    private final EmployeeMapper employeeMapper;
 
     @Override
     @Transactional
-    public void save(DepartmentDTO departmentDTO) {
-        Department department = DepartmentMapper.toEntity(departmentDTO);
-        departmentRepository.save(department);
+    public DepartmentResponseDto save(DepartmentRequestDto departmentRequestDto) {
+        Department department = createDepartment(departmentRequestDto);
+        department = departmentRepository.save(department);
+
+        return departmentMapper.toDepartmentResponseDto(department);
     }
 
     @Override
-    public List<DepartmentDTO> findAll() {
+    public List<DepartmentResponseDto> findAll() {
         return departmentRepository.findAll().stream()
-                .map(DepartmentMapper::toDto)
-                .sorted(Comparator.comparing(DepartmentDTO::getId))
+                .map(departmentMapper::toDepartmentResponseDto)
+                .sorted(Comparator.comparing(DepartmentResponseDto::getId))
                 .toList();
     }
 
     @Override
-    public DepartmentDTO findById(String id) {
+    public DepartmentResponseDto findById(String id) {
         Integer departmentId = TryParse.Int(id);
         return departmentRepository.findById(departmentId)
-                .map(DepartmentMapper::toDto)
+                .map(departmentMapper::toDepartmentResponseDto)
                 .orElseThrow(DepartmentNotFoundException::new);
     }
 
     @Override
     @Transactional
-    public void update(DepartmentDTO departmentDTO) throws ObjectNotFoundException {
-        Department departmentNew = DepartmentMapper.toEntity(departmentDTO);
+    public Response update(String id, DepartmentRequestDto departmentRequestDto) {
+        Department departmentNew = createDepartment(departmentRequestDto);
+        departmentNew.setId(TryParse.Int(id));
+
         Department departmentUpdated = fillNullFields(departmentNew);
         departmentRepository.update(departmentUpdated);
+        return new Response(SUCCESS_UPDATE_MESSAGE);
     }
 
     @Override
     @Transactional
-    public void deleteById(String id) {
+    public Response deleteById(String id) {
         Integer departmentId = TryParse.Int(id);
         if (!departmentRepository.existsById(departmentId)) {
             throw new DepartmentNotFoundException();
-        } else {
-            departmentRepository.deleteById(departmentId);
         }
+        departmentRepository.deleteById(departmentId);
+        return new Response(SUCCESS_DELETE_MESSAGE);
     }
 
     @Override
-    public List<EmployeeDTO> findEmployeeByDepartmentId(String id) {
+    public List<EmployeeResponseDto> findEmployeeByDepartmentId(String id) {
         Integer departmentId = TryParse.Int(id);
         if (!departmentRepository.existsById(departmentId)) {
             throw new DepartmentNotFoundException();
-        } else {
-            return departmentRepository.findEmployeesByDepartmentId(departmentId).stream()
-                    .map(EmployeeMapper::toDto)
-                    .sorted(Comparator.comparing(EmployeeDTO::getId))
-                    .toList();
         }
+        return departmentRepository.findEmployeesByDepartmentId(departmentId).stream()
+                .map(employeeMapper::toEmployeeResponseDto)
+                .sorted(Comparator.comparing(EmployeeResponseDto::getId))
+                .toList();
     }
 
     private Department fillNullFields(Department department_new) {
@@ -96,5 +100,12 @@ public class DepartmentServiceImpl implements DepartmentService {
         }
 
         return department_old;
+    }
+
+    private Department createDepartment(DepartmentRequestDto departmentRequestDto) {
+        return Department.builder()
+                .departmentName(departmentRequestDto.getDepartmentName())
+                .location(departmentRequestDto.getLocation())
+                .build();
     }
 }

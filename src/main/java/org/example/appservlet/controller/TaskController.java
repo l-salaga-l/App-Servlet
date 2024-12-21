@@ -1,55 +1,57 @@
 package org.example.appservlet.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.example.appservlet.dto.EmployeeDTO;
-import org.example.appservlet.dto.Response;
-import org.example.appservlet.dto.TaskDTO;
+import org.example.appservlet.dto.request.TaskRequestDto;
+import org.example.appservlet.dto.response.EmployeeResponseDto;
+import org.example.appservlet.dto.response.Response;
+import org.example.appservlet.dto.response.TaskResponseDto;
 import org.example.appservlet.service.TaskService;
-import org.example.appservlet.util.TryParse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
 import java.util.List;
 
 @RestController
 @RequestMapping(value = "/task", produces = "application/json")
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
+@RequiredArgsConstructor
 public class TaskController {
     private final TaskService taskService;
 
     @GetMapping(value = "/")
-    public ResponseEntity<List<TaskDTO>> getAllTasks() {
-        return new ResponseEntity<>(taskService.findAll(), HttpStatus.OK);
+    public ResponseEntity<List<TaskResponseDto>> getAllTasks() {
+        return ResponseEntity.ok(taskService.findAll());
     }
 
     @GetMapping(value = "/{id}")
-    public ResponseEntity<TaskDTO> getTaskById(@PathVariable(value = "id") String id) {
-        return new ResponseEntity<>(taskService.findById(id), HttpStatus.OK);
+    public ResponseEntity<TaskResponseDto> getTaskById(@PathVariable(value = "id") String id) {
+        return ResponseEntity.ok(taskService.findById(id));
     }
 
     @GetMapping(value = "/{id}/employees")
-    public ResponseEntity<List<EmployeeDTO>> getEmployees(@PathVariable(value = "id") String id) {
-        return new ResponseEntity<>(taskService.findEmployeesByTaskId(id), HttpStatus.OK);
+    public ResponseEntity<List<EmployeeResponseDto>> getEmployees(@PathVariable(value = "id") String id) {
+        return ResponseEntity.ok(taskService.findEmployeesByTaskId(id));
     }
 
     @PostMapping(value = "/{id}")
-    public ResponseEntity<Response> updateTask(@PathVariable(value = "id") String id, @RequestBody TaskDTO taskDTO) {
-        taskDTO.setId(TryParse.Int(id));
-        taskService.update(taskDTO);
-        return new ResponseEntity<>(new Response("Данные успешно обновлены.", HttpStatus.OK), HttpStatus.OK);
+    public ResponseEntity<Response> updateTask(@PathVariable(value = "id") String id,
+                                               @RequestBody @Validated TaskRequestDto taskRequestDto) {
+        return ResponseEntity.ok(taskService.update(id, taskRequestDto));
     }
 
     @PutMapping(value = "/")
-    public ResponseEntity<Response> createTask(@RequestBody TaskDTO taskDTO) {
-        taskService.save(taskDTO);
-        return new ResponseEntity<>(new Response("Запись успешно сохранена.", HttpStatus.CREATED), HttpStatus.CREATED);
+    public ResponseEntity<TaskResponseDto> createTask(@RequestBody @Validated TaskRequestDto taskRequestDto) {
+        return ResponseEntity.ok(taskService.save(taskRequestDto));
     }
 
     @DeleteMapping(value = "/{id}")
     public ResponseEntity<Response> deleteTask(@PathVariable(value = "id") String id) {
-        taskService.deleteById(id);
-        return new ResponseEntity<>(new Response("Запись успешно удалена.", HttpStatus.OK), HttpStatus.OK);
+        return ResponseEntity.ok(taskService.deleteById(id));
     }
 }
